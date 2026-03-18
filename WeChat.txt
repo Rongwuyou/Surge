@@ -35,7 +35,7 @@ DOMAIN-SUFFIX,wx.qq.com
 DOMAIN-SUFFIX,wxapp.tc.qq.com
 DOMAIN-SUFFIX,wxs.qq.com
 DOMAIN-SUFFIX,yun-hl.3g.qq.com
-iP-CIDR,30.184.9.202/32,no-resolve
+IP-CIDR,30.184.9.202/32,no-resolve
 IP-CIDR,43.156.222.113/32,no-resolve
 IP-CIDR,43.156.222.152/32,no-resolve
 IP-CIDR,43.156.222.176/32,no-resolve
