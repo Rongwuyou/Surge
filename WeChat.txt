@@ -1,4 +1,6 @@
 # > WeChat
+DOMAIN,marscdnbypass-wxapp.tc.qq.com
+DOMAIN-SUFFIX,wxapp.tc.qq.com
 DOMAIN-SUFFIX,wechat.com, extended-matching
 DOMAIN-SUFFIX,wxapp
 DOMAIN,dl.wechat.com
