@@ -57,10 +57,13 @@ IP-CIDR,101.32.118.25/32,no-resolve
 IP-CIDR,101.32.133.16/32,no-resolve
 IP-CIDR,101.32.133.53/32,no-resolve
 IP-CIDR,101.32.133.209/32,no-resolve
+IP-CIDR,101.33.18.14/32,no-resolve
+IP-CIDR,101.33.18.32/32,no-resolve
 IP-CIDR,116.130.226.172/32,no-resolve
 IP-CIDR,129.226.3.47/32,no-resolve
 IP-CIDR,129.226.107.59/32,no-resolve
 IP-CIDR,129.226.107.244/32,no-resolve
+IP-CIDR,157.148.56.182/32,no-resolve
 DOMAIN,apd-pcdnwxlogin.teg.tencent-cloud.net
 DOMAIN,dldir1.qq.com
 DOMAIN,slife.xy-asia.com
