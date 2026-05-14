@@ -7,7 +7,7 @@ DOMAIN,janapi.jd.com
 DOMAIN,mssdk.volces.com
 DOMAIN,dsp-x.jd.com
 DOMAIN,vod-license-m.volccdn.com
-DOMAIN-SUFFIX,soulapp.cn
+DOMAIN,soulapp.cn
 DOMAIN-SUFFIX,soulapp.cn
 DOMAIN-SUFFIX,soulapp.com
 DOMAIN-SUFFIX,soulapp-api.com
@@ -41,6 +41,7 @@ IP-CIDR,116.62.108.43/32,no-resolve
 IP-CIDR,116.62.247.96/32,no-resolve
 IP-CIDR,118.31.7.235/32,no-resolve
 IP-CIDR,118.31.112.221/32,no-resolve
+IP-CIDR,119.84.246.227/32,no-resolve
 IP-CIDR,120.55.55.115/32,no-resolve
 IP-CIDR,120.55.62.124/32,no-resolve
 IP-CIDR,120.55.65.167/32,no-resolve
@@ -49,6 +50,7 @@ IP-CIDR,121.40.189.58/32,no-resolve
 IP-CIDR,121.43.161.107/32,no-resolve
 IP-CIDR,121.196.203.183/32,no-resolve
 IP-CIDR,121.196.197.147/32,no-resolve
+IP-CIDR,122.228.77.213/32,no-resolve
 IP-CIDR6,2400:3200:1500::70/32,no-resolve
 IP-CIDR6,2400:3200:1500::169/32,no-resolve
 IP-CIDR6,2400:3200:1500::1fb/32,no-resolve
