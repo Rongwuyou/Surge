@@ -31,6 +31,7 @@ jobs:
           set -euo pipefail
 
           OUT_DIR="Rules/Telegram"
+          RAW_FILE="$OUT_DIR/.telegram_all.raw"
           mkdir -p "$OUT_DIR"
 
           curl -fsSL --retry 3 --connect-timeout 15 \
@@ -45,22 +46,40 @@ jobs:
             "https://raw.githubusercontent.com/ConnersHua/RuleGo/master/Surge/Ruleset/Extra/Telegram.list" \
             -o "$OUT_DIR/ConnersHua-Telegram.list"
 
+          cat \
+            "$OUT_DIR/RabbitSpec-TelegramASN.list" \
+            "$OUT_DIR/blackmatrix7-Telegram.list" \
+            "$OUT_DIR/ConnersHua-Telegram.list" \
+            | sed 's/\r$//' \
+            | sed 's/[[:space:]]*\/\/.*$//' \
+            | awk '{$1=$1; print}' \
+            | awk 'NF && $0 !~ /^#/ && $0 !~ /^OR,/' \
+            | awk '!seen[$0]++' > "$RAW_FILE"
+
           {
             echo "# NAME: Telegram_All"
             echo "# AUTHOR: Rongwuyou"
+            echo "# SORT: PROCESS-NAME > DOMAIN > DOMAIN-SUFFIX > DOMAIN-KEYWORD > IP-CIDR > IP-CIDR6 > IP-ASN"
             echo "# SOURCE: Rabbit-Spec/Surge Rules/TelegramASN.list"
             echo "# SOURCE: blackmatrix7/ios_rule_script rule/Surge/Telegram/Telegram.list"
             echo "# SOURCE: ConnersHua/RuleGo Surge/Ruleset/Extra/Telegram.list"
             echo
-            cat \
-              "$OUT_DIR/RabbitSpec-TelegramASN.list" \
-              "$OUT_DIR/blackmatrix7-Telegram.list" \
-              "$OUT_DIR/ConnersHua-Telegram.list" \
-              | sed 's/\r$//' \
-              | sed 's/[[:space:]]*\/\/.*$//' \
-              | awk '{$1=$1; print}' \
-              | awk 'NF && $0 !~ /^#/ && !seen[$0]++'
+            awk -F, '$1 == "PROCESS-NAME"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            echo
+            awk -F, '$1 == "DOMAIN"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            echo
+            awk -F, '$1 == "DOMAIN-SUFFIX"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            echo
+            awk -F, '$1 == "DOMAIN-KEYWORD"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            echo
+            awk -F, '$1 == "IP-CIDR"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            echo
+            awk -F, '$1 == "IP-CIDR6"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            echo
+            awk -F, '$1 == "IP-ASN"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2n -u
           } > "$OUT_DIR/Telegram_All.list"
+
+          rm -f "$RAW_FILE"
 
       - name: Commit changes
         shell: bash
