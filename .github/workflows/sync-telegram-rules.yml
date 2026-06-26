@@ -64,17 +64,17 @@ jobs:
             echo "# SOURCE: blackmatrix7/ios_rule_script rule/Surge/Telegram/Telegram.list"
             echo "# SOURCE: ConnersHua/RuleGo Surge/Ruleset/Extra/Telegram.list"
             echo
-            awk -F, '$1 == "PROCESS-NAME"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            awk -F, '$1 == "PROCESS-NAME"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2 -u
             echo
-            awk -F, '$1 == "DOMAIN"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            awk -F, '$1 == "DOMAIN"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2 -u
             echo
-            awk -F, '$1 == "DOMAIN-SUFFIX"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            awk -F, '$1 == "DOMAIN-SUFFIX"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2 -u
             echo
-            awk -F, '$1 == "DOMAIN-KEYWORD"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            awk -F, '$1 == "DOMAIN-KEYWORD"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2 -u
             echo
             awk -F, '$1 == "IP-CIDR"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
             echo
-            awk -F, '$1 == "IP-CIDR6"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2V -u
+            awk -F, '$1 == "IP-CIDR6"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2 -u
             echo
             awk -F, '$1 == "IP-ASN"' "$RAW_FILE" | LC_ALL=C sort -t, -k2,2n -u
           } > "$OUT_DIR/Telegram_All.list"
