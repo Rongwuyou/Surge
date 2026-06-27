@@ -4,11 +4,18 @@ DOMAIN-SUFFIX,tokenlon.im
 DOMAIN-SUFFIX,imkey.im
 DOMAIN-SUFFIX,tokenpocket.pro
 
+# imToken 相关服务
+DOMAIN-SUFFIX,improd.top
+DOMAIN-SUFFIX,improd.pro
+DOMAIN-SUFFIX,improd.works
+DOMAIN,imtoken-files.oss-accelerate.aliyuncs.com
+
 # TokenPocket 相关服务
 DOMAIN-SUFFIX,tp.xyz
 DOMAIN-SUFFIX,tptool.pro
 DOMAIN-SUFFIX,keypal.pro
 DOMAIN-SUFFIX,transit.finance
+DOMAIN-SUFFIX,mytokenpocket.vip
 DOMAIN-SUFFIX,help.tokenpocket.pro
 DOMAIN-SUFFIX,github.tokenpocket.pro
 
