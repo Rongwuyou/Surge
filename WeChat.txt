@@ -1,6 +1,6 @@
 # > WeChat
-# UpdateTime: 2026-06-28 21:54:22
-# RuleCount: 803
+# UpdateTime: 2026-07-02
+# RuleCount: 804
 # Optimized: exact IP snapshot merged with public WeChat domain suffixes; no broad IP aggregation
 
 DOMAIN,apd-pcdnwxlogin.teg.tencent-cloud.net
@@ -63,6 +63,7 @@ DOMAIN-SUFFIX,weixin.com
 DOMAIN-SUFFIX,weixin.qq.com
 DOMAIN-SUFFIX,weixinbridge.com
 DOMAIN-SUFFIX,weixinsxy.com
+DOMAIN-SUFFIX,wxgateway.com
 DOMAIN-SUFFIX,wx.gtimg.com
 DOMAIN-SUFFIX,wx.qq.com
 DOMAIN-SUFFIX,wxapp.tc.qq.com
