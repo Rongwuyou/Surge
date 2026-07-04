@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import ipaddress
-import re
 import sys
 import urllib.request
 from datetime import datetime, timezone, timedelta
@@ -17,15 +16,19 @@ SOURCE_URLS = [
     "https://raw.githubusercontent.com/ConnersHua/RuleGo/master/Surge/Ruleset/Extra/WeChat.list",
 ]
 
-SUPPORTED_TYPES = {
-    "DOMAIN",
-    "DOMAIN-SUFFIX",
-    "IP-CIDR",
-    "IP-CIDR6",
-    "USER-AGENT",
+TYPE_ORDER = {
+    "DOMAIN": 0,
+    "DOMAIN-SUFFIX": 1,
+    "DOMAIN-KEYWORD": 2,
+    "DOMAIN-SET": 3,
+    "IP-CIDR": 4,
+    "IP-CIDR6": 5,
+    "IP-ASN": 6,
+    "GEOIP": 7,
+    "USER-AGENT": 8,
+    "URL-REGEX": 9,
+    "PROCESS-NAME": 10,
 }
-
-DOMAIN_RE = re.compile(r"^(?:[a-z0-9_*~-]+\.)*[a-z0-9_*~-]+$", re.I)
 
 
 def fetch_text(url: str) -> str:
@@ -54,21 +57,12 @@ def normalize_rule(line: str) -> str | None:
         return None
 
     rule_type = parts[0].upper()
-    if rule_type not in SUPPORTED_TYPES:
-        return None
-
     value = parts[1].strip()
-    if not value:
+    if not rule_type or not value:
         return None
 
-    if rule_type in {"DOMAIN", "DOMAIN-SUFFIX"}:
-        value = value.lower().rstrip(".")
-        if not DOMAIN_RE.match(value):
-            return None
-        return f"{rule_type},{value}"
-
-    if rule_type == "USER-AGENT":
-        return f"{rule_type},{value}"
+    if rule_type in {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD"}:
+        return f"{rule_type},{value.lower().rstrip('.')}"
 
     if rule_type in {"IP-CIDR", "IP-CIDR6"}:
         try:
@@ -81,7 +75,11 @@ def normalize_rule(line: str) -> str | None:
             return None
         return f"{rule_type},{network},no-resolve"
 
-    return None
+    if rule_type == "IP-ASN":
+        return f"{rule_type},{value},no-resolve"
+
+    cleaned_parts = [rule_type, value] + [p for p in parts[2:] if p]
+    return ",".join(cleaned_parts)
 
 
 def collect_rules(text: str) -> set[str]:
@@ -94,18 +92,22 @@ def collect_rules(text: str) -> set[str]:
 
 
 def sort_key(rule: str):
-    rule_type, value, *_ = rule.split(",")
-    order = {
-        "DOMAIN": 0,
-        "DOMAIN-SUFFIX": 1,
-        "IP-CIDR": 2,
-        "IP-CIDR6": 3,
-        "USER-AGENT": 4,
-    }[rule_type]
+    parts = rule.split(",")
+    rule_type = parts[0]
+    value = parts[1] if len(parts) > 1 else ""
+    order = TYPE_ORDER.get(rule_type, 99)
     if rule_type in {"IP-CIDR", "IP-CIDR6"}:
-        net = ipaddress.ip_network(value, strict=False)
-        return (order, net.version, int(net.network_address), net.prefixlen)
-    return (order, value.lower())
+        try:
+            net = ipaddress.ip_network(value, strict=False)
+            return (order, net.version, int(net.network_address), net.prefixlen, rule)
+        except ValueError:
+            return (order, value.lower(), rule)
+    if rule_type == "IP-ASN":
+        try:
+            return (order, int(value), rule)
+        except ValueError:
+            return (order, value.lower(), rule)
+    return (order, value.lower(), rule)
 
 
 def render(rules: set[str]) -> str:
@@ -116,7 +118,7 @@ def render(rules: set[str]) -> str:
         "# > WeChat\n"
         f"# UpdateTime: {now}\n"
         f"# RuleCount: {len(rules)}\n"
-        "# AutoUpdate: weekly by GitHub Actions; exact IP rules preserved; broad IP-ASN and DOMAIN-KEYWORD skipped\n"
+        "# AutoUpdate: weekly by GitHub Actions; current rules preserved; upstream rules merged without broad-rule filtering\n"
         "\n"
         f"{body}\n"
     )
