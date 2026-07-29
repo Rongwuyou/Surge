@@ -1,0 +1,39 @@
+name: Update CN Additional Rules
+
+on:
+  schedule:
+    - cron: "30 21 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/update-cn-additional.yml"
+      - ".github/scripts/update_cn_additional.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-cn-additional-rules
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Convert CN additional rules
+        run: python .github/scripts/update_cn_additional.py
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update CN additional rules"
+          file_pattern: CN-Additional.list
