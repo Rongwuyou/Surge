@@ -8,6 +8,8 @@ on:
     paths:
       - ".github/workflows/update-cn-additional.yml"
       - ".github/scripts/update_cn_additional.py"
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
@@ -18,6 +20,7 @@ concurrency:
 
 jobs:
   update:
+    if: github.event_name != 'issues' || github.event.issue.title == 'Update CN Additional Rules'
     runs-on: ubuntu-latest
 
     steps:
