@@ -1,4 +1,4 @@
-name: Update CN Additional Rules
+name: Update CN Additional Domain Set
 
 on:
   schedule:
@@ -29,11 +29,11 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Convert CN additional rules
+      - name: Build and validate domain set
         run: python .github/scripts/update_cn_additional.py
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Update CN additional rules"
+          commit_message: "Update CN additional domain set"
           file_pattern: CN-Additional.list
