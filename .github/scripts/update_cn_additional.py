@@ -1,68 +1,85 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import re
 from pathlib import Path
 from urllib.request import Request, urlopen
 
 SOURCE_URL = "https://static-file-global.353355.xyz/rules/cn-additional-list.txt"
 OUTPUT_PATH = Path("CN-Additional.list")
+DOMAIN_RE = re.compile(r"^[a-z0-9-]+(?:\.[a-z0-9-]+)+$")
 
 
 def fetch_source() -> str:
     request = Request(
         SOURCE_URL,
-        headers={"User-Agent": "Rongwuyou-Surge-Rules/1.0"},
+        headers={"User-Agent": "Rongwuyou-Surge-Rules/2.0"},
     )
     with urlopen(request, timeout=60) as response:
         return response.read().decode("utf-8-sig")
 
 
-def convert(text: str) -> tuple[list[str], str | None]:
+def normalize_domain(raw_line: str) -> str | None:
+    line = raw_line.strip()
+    if not line or line.startswith(("#", ";", "//")):
+        return None
+
+    upper = line.upper()
+    if upper.startswith("DOMAIN-SUFFIX,") or upper.startswith("DOMAIN,"):
+        line = line.split(",", 1)[1].strip()
+
+    domain = line.lstrip(".").rstrip(".").lower()
+    try:
+        domain = domain.encode("idna").decode("ascii")
+    except UnicodeError:
+        return None
+
+    if len(domain) > 253 or not DOMAIN_RE.fullmatch(domain):
+        return None
+
+    labels = domain.split(".")
+    if any(len(label) > 63 or label.startswith("-") or label.endswith("-") for label in labels):
+        return None
+
+    return domain
+
+
+def convert(text: str) -> tuple[list[str], list[str]]:
     domains: list[str] = []
+    invalid: list[str] = []
     seen: set[str] = set()
-    source_updated: str | None = None
 
     for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if not line:
+        stripped = raw_line.strip()
+        domain = normalize_domain(raw_line)
+        if domain is None:
+            if stripped and not stripped.startswith(("#", ";", "//")):
+                invalid.append(stripped)
             continue
-        if line.startswith("#"):
-            if "Updated:" in line:
-                source_updated = line.split("Updated:", 1)[1].strip()
-            continue
-
-        domain = line.lstrip(".").lower()
         if domain in seen:
             continue
         seen.add(domain)
         domains.append(domain)
 
-    return domains, source_updated
-
-
-def render(domains: list[str], source_updated: str | None) -> str:
-    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    header = [
-        "# CN Additional Rules for Surge",
-        f"# Source: {SOURCE_URL}",
-        f"# Source Updated: {source_updated or 'unknown'}",
-        f"# Generated: {generated_at}",
-        f"# Total Rules: {len(domains)}",
-        "",
-    ]
-    rules = [f"DOMAIN-SUFFIX,{domain}" for domain in domains]
-    return "\n".join(header + rules) + "\n"
+    return domains, invalid
 
 
 def main() -> None:
-    source = fetch_source()
-    domains, source_updated = convert(source)
-    if not domains:
-        raise RuntimeError("Source list is empty after conversion")
+    domains, invalid = convert(fetch_source())
+    if len(domains) < 40000:
+        raise RuntimeError(f"Unexpected rule count: {len(domains)}")
 
-    output = render(domains, source_updated)
-    OUTPUT_PATH.write_text(output, encoding="utf-8", newline="\n")
-    print(f"Wrote {len(domains)} rules to {OUTPUT_PATH}")
+    # Surge DOMAIN-SET: a leading dot matches the domain itself and all subdomains.
+    OUTPUT_PATH.write_text(
+        "\n".join(f".{domain}" for domain in domains) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    print(f"Wrote {len(domains)} domains to {OUTPUT_PATH}")
+    if invalid:
+        print(f"Skipped {len(invalid)} invalid lines")
+        for line in invalid[:20]:
+            print(f"  {line}")
 
 
 if __name__ == "__main__":
