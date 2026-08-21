@@ -1,0 +1,39 @@
+name: Update Twitter Rules
+
+on:
+  schedule:
+    - cron: "15 20 * * 6"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/update-twitter.yml"
+      - ".github/scripts/update_twitter.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-twitter-rules
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Merge Twitter rules
+        run: python .github/scripts/update_twitter.py
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update Twitter rules"
+          file_pattern: Twitter.txt
