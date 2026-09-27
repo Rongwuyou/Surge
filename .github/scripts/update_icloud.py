@@ -81,7 +81,9 @@ def parse_private_relay(content: str) -> set[tuple[str, str]]:
     for raw in content.replace("\r", "").splitlines():
         value = raw.strip().lstrip("\ufeff").split(maxsplit=1)[0] if raw.strip() else ""
         value = value.rstrip(".").lower()
-        if value and not value.startswith("#") and is_icloud_value(value):
+        if value and not value.startswith("#") and (
+            is_icloud_value(value) or value in {"mask.apple-dns.net", "canary.mask.apple-dns.net"}
+        ):
             if DOMAIN_RE.fullmatch(value):
                 rules.add(("DOMAIN", value))
     return rules

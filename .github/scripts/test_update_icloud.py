@@ -47,10 +47,19 @@ class ICloudRuleTests(unittest.TestCase):
         )
 
     def test_private_relay_parser_keeps_only_icloud_endpoints(self):
-        text = "mask.icloud.com\nmask.apple-dns.net\nexample.com\n"
+        text = (
+            "mask.icloud.com\n"
+            "mask.apple-dns.net\n"
+            "canary.mask.apple-dns.net\n"
+            "example.com\n"
+        )
         self.assertEqual(
             ICLOUD.parse_private_relay(text),
-            {("DOMAIN", "mask.icloud.com")},
+            {
+                ("DOMAIN", "mask.icloud.com"),
+                ("DOMAIN", "mask.apple-dns.net"),
+                ("DOMAIN", "canary.mask.apple-dns.net"),
+            },
         )
 
     def test_render_declares_rule_count_and_fixed_sources(self):
