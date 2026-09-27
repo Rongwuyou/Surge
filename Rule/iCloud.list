@@ -1,7 +1,7 @@
 # NAME: Multi-source-iCloud
 # AUTHOR: cbzy-3p
 # FORMAT: Surge Rule Set
-# UPDATED: 2026-09-27 09:34:36 UTC
+# UPDATED: 2026-09-27 19:46:43 UTC
 # RULE COUNT: 63
 # SOURCE: https://raw.githubusercontent.com/SukkaW/Surge/master/Source/non_ip/apple_services.conf
 # SOURCE: https://raw.githubusercontent.com/SukkaW/Surge/master/Source/domainset/icloud_private_relay.conf
@@ -15,7 +15,6 @@
 
 DOMAIN,canary.mask.apple-dns.net
 DOMAIN,mask.apple-dns.net
-DOMAIN-KEYWORD,icloud.com.akadns.net
 DOMAIN-SUFFIX,apple-cloudkit.com
 DOMAIN-SUFFIX,apple-icloud.cn
 DOMAIN-SUFFIX,apple-livephotoskit.com
@@ -76,3 +75,4 @@ DOMAIN-SUFFIX,myicloud.net
 DOMAIN-SUFFIX,mylcloud.net
 DOMAIN-SUFFIX,www-cdn.icloud.com.akadns.net
 DOMAIN-SUFFIX,wwwicloud.com
+DOMAIN-KEYWORD,icloud.com.akadns.net

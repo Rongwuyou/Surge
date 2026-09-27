@@ -1,13 +1,13 @@
 {
-  "version": 1,
   "counts": {
-    "skk_apple": 4,
-    "skk_private_relay": 6,
     "bm7": 61,
-    "rabbit": 53,
     "conners": 6,
     "loyal": 0,
-    "yuu": 53,
-    "output": 63
-  }
+    "output": 63,
+    "rabbit": 53,
+    "skk_apple": 4,
+    "skk_private_relay": 6,
+    "yuu": 53
+  },
+  "version": 1
 }
