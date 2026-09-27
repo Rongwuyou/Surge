@@ -11,6 +11,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent
 FIXED_HOST_MARKERS = (
     "ruleset.skk.moe/",
+    "SukkaW/",
     "blackmatrix7/",
     "Rabbit-Spec/",
     "ConnersHua/",
@@ -38,7 +39,7 @@ class SourcePolicyTest(unittest.TestCase):
             "update_xiaohongshu.py": {"v2fly/domain-list-community", "wresource/hxmy-proxy", "bgpeer/rules", "dl123100/clash-geosite"},
             "update_v2fly_rules.py": {"v2fly/domain-list-community"},
         }
-        preferred = {"blackmatrix7", "Rabbit-Spec", "ConnersHua", "Loyalsoldier", "Yuu518"}
+        preferred = {"SukkaW", "blackmatrix7", "Rabbit-Spec", "ConnersHua", "Loyalsoldier", "Yuu518"}
         for path in SCRIPT_DIR.glob("update_*.py"):
             if path.name == "update_modules.py":
                 continue
@@ -59,9 +60,10 @@ class SourcePolicyTest(unittest.TestCase):
 
     def test_core_source_maps_use_only_fixed_sources(self):
         apple = load("update_apple")
+        icloud = load("update_icloud")
         proxy = load("update_proxy")
         media = load("update_media_rules")
-        urls = list(apple.SOURCES.values()) + list(proxy.SOURCES.values())
+        urls = list(apple.SOURCES.values()) + list(icloud.SOURCES.values()) + list(proxy.SOURCES.values())
         urls += [item[1] for config in media.CONFIGS.values() for item in config]
         invalid = [url for url in urls if not any(marker in url for marker in FIXED_HOST_MARKERS)]
         self.assertEqual(invalid, [])
