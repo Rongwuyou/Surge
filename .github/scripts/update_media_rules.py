@@ -64,7 +64,8 @@ CONFIGS = {
         ("skk-ipv4", f"{SKK}/ip/china_ip.conf", "surge", 1_000),
         ("skk-ipv6", f"{SKK}/ip/china_ip_ipv6.conf", "surge", 100),
         ("rabbit", f"{RABBIT}/ChinaCIDR.list", "surge", 9_000),
-        ("bm7", f"{BM7}/ChinaIPs/ChinaIPs.list", "surge", 20_000),
+        # Upstream has ~19k IPv4/IPv6 rules; snapshot drift checks remain active.
+        ("bm7", f"{BM7}/ChinaIPs/ChinaIPs.list", "surge", 18_000),
         ("yuu", f"{YUU}/geoip/cn.list", "surge", 8_500),
     ],
 }
