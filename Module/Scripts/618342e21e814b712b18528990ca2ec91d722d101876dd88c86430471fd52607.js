@@ -52,9 +52,9 @@ let localText = queryObject.localtext != undefined ? '\n' + queryObject.localtex
 
 let noNtf = queryObject.noNtf ? istrue(queryObject.noNtf) : false //默认开启通知
 
-let localsetNtf = $.lodash_get(arg, 'Notify') || $.getval('ScriptHub通知') || ''
-
-noNtf = localsetNtf == '开启通知' ? false : localsetNtf == '关闭通知' ? true : noNtf
+const localsetNtf = ($.lodash_get(arg, 'Notify') || $.getval('ScriptHub通知') || '').trim()
+if (/^开启(?:通知)?$/.test(localsetNtf)) noNtf = false
+else if (/^关闭(?:通知)?$/.test(localsetNtf)) noNtf = true
 
 let bodyBox = []
 
@@ -77,8 +77,8 @@ if (queryObject.target == 'rule-set') {
   isShadowrocket = isRockettarget
 }
 
-let Rin0 = queryObject.y != undefined ? getArgArr(queryObject.y) : null
-let Rout0 = queryObject.x != undefined ? getArgArr(queryObject.x) : null
+let Rin0 = queryObject.y != undefined ? getArgArr(queryObject.y).filter(item => item.trim()) : null
+let Rout0 = queryObject.x != undefined ? getArgArr(queryObject.x).filter(item => item.trim()) : null
 let ipNoResolve = istrue(queryObject.nore)
 let sni = queryObject.sni != undefined ? getArgArr(queryObject.sni) : null
 
@@ -127,7 +127,7 @@ let ruleValue //规则
       let res = await http(reqArr[i], reqHeaders)
       let reStatus = res.status
       body = reStatus == 200 ? res.body : reStatus == 404 ? '#!error=404: Not Found' : ''
-      reStatus == 404 && $.msg(JS_NAME, '来源链接已失效', '404: Not Found ---> ' + reqArr[i], '')
+      reStatus == 404 && noNtf == false && $.msg(JS_NAME, '来源链接已失效', '404: Not Found ---> ' + reqArr[i], '')
 
       if (body.match(/^(?:\s)*\/\*[\s\S]*?(?:\r|\n)\s*\*+\//)) {
         body = body.match(/^(?:\n|\r)*\/\*([\s\S]*?)(?:\r|\n)\s*\*+\//)[1]

@@ -60,8 +60,9 @@ const scEvUrlmodi = queryObject.evUrlmodi
 
 let noNtf = queryObject.noNtf ? istrue(queryObject.noNtf) : false //默认开启通知
 
-let localsetNtf = $.lodash_get(arg, 'Notify') || $.getval('ScriptHub通知') || ''
-noNtf = localsetNtf == '开启通知' ? false : localsetNtf == '关闭通知' ? true : noNtf
+const localsetNtf = ($.lodash_get(arg, 'Notify') || $.getval('ScriptHub通知') || '').trim()
+if (/^开启(?:通知)?$/.test(localsetNtf)) noNtf = false
+else if (/^关闭(?:通知)?$/.test(localsetNtf)) noNtf = true
 
 let jqEnabled = istrue(queryObject.jqEnabled)
 let openMsgHtml = istrue(queryObject.openMsgHtml)
@@ -71,8 +72,8 @@ noNtf = openMsgHtml ? true : noNtf
 let nName = queryObject.n != undefined ? getArgArr(queryObject.n) : null //名字简介
 let category = queryObject.category ?? null
 let icon = queryObject.icon ?? null
-let Pin0 = queryObject.y != undefined ? getArgArr(queryObject.y) : null //保留
-let Pout0 = queryObject.x != undefined ? getArgArr(queryObject.x) : null //排除
+let Pin0 = queryObject.y != undefined ? getArgArr(queryObject.y).filter(item => item.trim()) : null //保留
+let Pout0 = queryObject.x != undefined ? getArgArr(queryObject.x).filter(item => item.trim()) : null //排除
 let hnAdd = queryObject.hnadd != undefined ? queryObject.hnadd.split(/\s*,\s*/) : null //加
 let hnDel = queryObject.hndel != undefined ? queryObject.hndel.split(/\s*,\s*/) : null //减
 let hnRegDel = queryObject.hnregdel != undefined ? new RegExp(queryObject.hnregdel) : null //正则删除hostname
@@ -324,7 +325,7 @@ if (binaryInfo != null && binaryInfo.length > 0) {
       let res = await http(reqArr[i], reqHeaders)
       let reStatus = res.status
       body = reStatus == 200 ? res.body : reStatus == 404 ? '#!error=404: Not Found' : ''
-      reStatus == 404 && $.msg(JS_NAME, '来源链接已失效', '404: Not Found ---> ' + reqArr[i], '')
+      reStatus == 404 && noNtf == false && $.msg(JS_NAME, '来源链接已失效', '404: Not Found ---> ' + reqArr[i], '')
 
       if (body.match(/^(?:\s)*\/\*[\s\S]*?(?:\r|\n)\s*\*+\//)) {
         body = body.match(/^(?:\n|\r)*\/\*([\s\S]*?)(?:\r|\n)\s*\*+\//)[1]
@@ -344,9 +345,28 @@ if (binaryInfo != null && binaryInfo.length > 0) {
 
   if (bodyRewrite) {
     for await (let [y, x] of bodyRewrite.match(/[^\r\n]+/g).entries()) {
-      if (/^(#|;|\/\/)\s*/.test(x)) continue
-      const [_, type, regex, value] = x.match(/^((?:http-request|http-response)(?:-jq)?)\s+?(.*?)\s+?(.*?)$/)
-      rwbodyBox.push({ type, regex, value })
+      let line = x
+        .trim()
+        .replace(/^(#|;|\/\/)\s*/, '#')
+      let noteK = /^#/.test(line) && !/^#!/.test(line) ? '#' : ''
+
+      if (noteK && hasKeyword(Pin0, line)) {
+        line = line.replace(/^#/, '').trim()
+        noteK = ''
+      }
+      if (!noteK && hasKeyword(Pout0, line)) {
+        line = '#' + line
+        noteK = '#'
+        outBox.push(line)
+      }
+
+      if (delNoteSc && noteK) continue
+
+      line = noteK ? line.slice(1).trim() : line
+      const match = line.match(/^((?:http-request|http-response)(?:-jq)?)\s+?(.*?)\s+?(.*?)$/)
+      if (!match) continue
+      const [, type, regex, value] = match
+      rwbodyBox.push({ type, regex, value, noteK })
     }
   }
 
@@ -366,54 +386,49 @@ if (binaryInfo != null && binaryInfo.length > 0) {
     if (!/^(#|\/\/|;)/.test(x)) {
       x = stripLoonV2InlineComment(x)
     }
+    let isCommented = /^#/.test(x) && !/^#!/.test(x)
+    let excludedByKeyword = false
     //去掉注释
-    if (Pin0 != null) {
-      for (let i = 0; i < Pin0.length; i++) {
-        const elem = Pin0[i].trim()
-        if (x.indexOf(elem) != -1 && /^#/.test(x)) {
-          x = x.replace(/^#/, '')
-          inBox.push(x)
-          break
-        }
-      } //循环结束
-    } //去掉注释结束
+    if (hasKeyword(Pin0, x) && /^#/.test(x) && !/^#!/.test(x)) {
+      x = x.replace(/^#/, '')
+      isCommented = false
+      inBox.push(x)
+    }
 
     //增加注释
-    if (Pout0 != null) {
-      for (let i = 0; i < Pout0.length; i++) {
-        const elem = Pout0[i].trim()
-        if (
-          x.indexOf(elem) != -1 &&
-          !/^(hostname|force-http-engine-hosts|skip-proxy|always-real-ip|real-ip)\s*=/.test(x) &&
-          !/^#/.test(x)
-        ) {
-          x = '#' + x
-          outBox.push(x)
-          break
-        }
-      } //循环结束
-    } //增加注释结束
+    const isArgumentMetadata = /^#!arguments\s*=/.test(x)
+    if (
+      hasKeyword(Pout0, x) &&
+      !/^(hostname|force-http-engine-hosts|skip-proxy|always-real-ip|real-ip)\s*=/.test(x) &&
+      (!/^#/.test(x) || isArgumentMetadata)
+    ) {
+      x = '#' + x
+      isCommented = excludedByKeyword = true
+      outBox.push(x)
+    }
 
     //剔除被注释的重写
-    if (delNoteSc == true && /^#/.test(x) && !/^#!/.test(x)) {
+    if (delNoteSc && isCommented) {
       x = ''
     }
 
     // Loon 3.5.1+ 的 Script v2 在转换到其他应用时归一化为内部旧脚本格式，复用现有跨平台输出器。
     // 目标仍为 Loon 时直接保留原生 v2 行，避免丢失 method/status/header 等 Loon 专属组合条件。
     if (fromType === 'loon-plugin' || fromType === 'all-module') {
-      const loonV2Candidate = /^(request|response|cron|network-changed|generic)\b[\s\S]*\bthen\s+script\s*\(/i.test(x)
+      const loonV2Source = isCommented && !delNoteSc ? x.replace(/^#/, '').trim() : x
+      const loonV2Candidate = /^(request|response|cron|network-changed|generic)\b[\s\S]*\bthen\s+script\s*\(/i.test(loonV2Source)
       if (loonV2Candidate && isLooniOS) {
-        loonV2NativeLines.push({ line: x, num: y })
+        const line = applyLoonV2ScriptEdits(loonV2Source)
+        loonV2NativeLines.push({ line: isCommented ? `#${line}` : line, num: y })
         continue
       }
-      const loonV2 = normalizeLoonV2ScriptLine(x, targetApp)
+      const loonV2 = normalizeLoonV2ScriptLine(loonV2Source, targetApp)
       if (loonV2Candidate && loonV2?.unsupported) {
-        otherRule.push(`${_x} [Loon v2: ${loonV2.reason}]`)
+        if (!isCommented) otherRule.push(`${_x} [Loon v2: ${loonV2.reason}]`)
         continue
       }
       if (loonV2?.line) {
-        x = loonV2.line
+        x = isCommented ? `#${loonV2.line}` : loonV2.line
         loonV2NormalizedLines.add(x)
         if (loonV2.warnings?.length > 0) {
           loonV2Warnings.push(`${_x} → ${loonV2.warnings.join('；')}`)
@@ -422,13 +437,22 @@ if (binaryInfo != null && binaryInfo.length > 0) {
 
       // Loon 3.5.1+ 原生 Rewrite Action。旧解析器只认识 legacy rewrite 行，
       // 如果这里不提前消费，request/response.json.* 会被静默丢弃。
-      const loonV2Rewrite = await normalizeLoonV2RewriteLine(x, targetApp, y)
+      // A v2 `then script(...)` line is first normalized to legacy script
+      // syntax above; only native Rewrite Action lines should reach the
+      // Rewrite Action parser in their original form.
+      const loonV2RewriteSource = loonV2?.line ? x : loonV2Source
+      const loonV2Rewrite = await normalizeLoonV2RewriteLine(
+        loonV2RewriteSource,
+        targetApp,
+        y,
+        isCommented ? '#' : undefined
+      )
       if (loonV2Rewrite?.native) {
-        URLRewrite.push(x)
+        URLRewrite.push(isCommented ? `#${loonV2Source}` : x)
         continue
       }
       if (loonV2Rewrite?.unsupported) {
-        otherRule.push(`${_x} [Loon v2: ${loonV2Rewrite.reason}]`)
+        if (!isCommented) otherRule.push(`${_x} [Loon v2: ${loonV2Rewrite.reason}]`)
         continue
       }
       if (loonV2Rewrite?.handled) {
@@ -581,8 +605,17 @@ if (binaryInfo != null && binaryInfo.length > 0) {
     }
 
     //#!arguments参数
-    if (/^#!arguments\s*=\s*.+/.test(x) || /^[^#].+?=\s*(input|select|switch)\s*,/.test(x)) {
-      parseArguments(x)
+    // x-filtered Argument declarations are still metadata for a preserved
+    // commented Script. Parse the original declaration while del=false;
+    // del=true has already blanked x and therefore removes it from sgArg.
+    const preserveArgumentComment = !delNoteSc && (excludedByKeyword || isCommented)
+    const argumentSource = preserveArgumentComment ? x.replace(/^#/, '').trim() : x
+    const argumentNote = preserveArgumentComment ? '#' : ''
+    if (
+      /^#!arguments\s*=\s*.+/.test(argumentSource) ||
+      /^[^#].+?=\s*(input|select|switch)\s*,/.test(argumentSource)
+    ) {
+      parseArguments(argumentSource, argumentNote)
     }
 
     //hostname
@@ -873,10 +906,12 @@ if (binaryInfo != null && binaryInfo.length > 0) {
       })
     } //Panel信息解析结束
 
-    //脚本解析
-    if (/script-path\s*=.+/.test(x)) {
+    //脚本解析。x 过滤生成的注释在 del=false 时仍要出现在预览结果中。
+    const scriptSource = excludedByKeyword && !delNoteSc ? x.replace(/^#/, '').trim() : x
+    if (/script-path\s*=.+/.test(scriptSource)) {
+      x = scriptSource
       mark = getMark(y, body)
-      noteK = isNoteK(x)
+      noteK = excludedByKeyword ? '#' : isNoteK(x)
       jsurl = getJsInfo(x, /script-path\s*=\s*/)
       jsname = leadingTemplateIsNameOnly
         ? leadingTemplate.key
@@ -942,7 +977,7 @@ if (binaryInfo != null && binaryInfo.length > 0) {
         } //for
       }
       // 注释不加
-      if (!/^(#|;|\/\/)\s*/.test(x)) {
+      if (excludedByKeyword || !/^(#|;|\/\/)\s*/.test(x)) {
         jsBox.push({
           mark,
           noteK,
@@ -971,6 +1006,7 @@ if (binaryInfo != null && binaryInfo.length > 0) {
           num: y,
         })
       }
+      excludedByKeyword && (x = '#' + x)
     } //脚本解析结束
 
     //qx脚本解析
@@ -1175,7 +1211,7 @@ if (binaryInfo != null && binaryInfo.length > 0) {
 
   if (isLooniOS) {
     collectArgumentKeyRenameMap(jsBox)
-    loonSgArg = filterLoonArguments(sgArg, jsBox, hnBox)
+    loonSgArg = filterLoonArguments(sgArg, jsBox, hnBox, loonV2NativeLines)
   }
 
   //模块信息输出
@@ -1230,7 +1266,7 @@ if (binaryInfo != null && binaryInfo.length > 0) {
       let type = isRuleToggle ? 'switch' : loonSgArg[i].type
       let value = formatLoonArgumentValue(loonSgArg[i], type, isRuleToggle)
       let tag = loonSgArg[i].tag
-      loonArg.push(key + '=' + type + ',' + value + ',' + tag)
+      loonArg.push((loonSgArg[i].noteK ? '#' : '') + key + '=' + type + ',' + value + ',' + tag)
     }
   }
 
@@ -1413,9 +1449,13 @@ if (binaryInfo != null && binaryInfo.length > 0) {
   } //reject redirect输出for
 
   for (let i = 0; i < rwbodyBox.length; i++) {
-    const { type, regex, value } = rwbodyBox[i]
+    const { type, regex, value, mark = '', noteK = '' } = rwbodyBox[i]
+    // Native Loon v2 rewrites carry their comment marker through `mark`.
+    // Legacy [Body Rewrite] entries use `noteK`; both must remain disabled
+    // when the caller keeps commented rules instead of deleting them.
+    const comment = `${mark}${noteK ? '#' : ''}`
     if (isSurgeiOS || isShadowrocket) {
-      BodyRewrite.push(`${type} ${regex} ${value}`)
+      BodyRewrite.push(`${comment}${type} ${regex} ${value}`)
     } else if (isLooniOS) {
       let type2
       switch (type) {
@@ -1432,7 +1472,7 @@ if (binaryInfo != null && binaryInfo.length > 0) {
           type2 = 'response-body-json-jq'
           break
       }
-      URLRewrite.push(`${regex} ${type2} ${value}`)
+      URLRewrite.push(`${comment}${regex} ${type2} ${value}`)
     }
   }
 
@@ -1456,7 +1496,10 @@ if (binaryInfo != null && binaryInfo.length > 0) {
         URLRewrite.push(mark + noteK + x)
         break
 
-      case 'stash-stoverride':
+      case 'stash-stoverride': {
+        const disabledByMark = mark === '#'
+        const stashMark = disabledByMark ? '' : mark
+        if (disabledByMark) noteK = '#'
         if (noteK != '#') {
           noteKn8 = '\n        '
           noteKn6 = '\n      '
@@ -1472,8 +1515,9 @@ if (binaryInfo != null && binaryInfo.length > 0) {
         }
         let hdtype = isResponseHeaderRewrite ? ' response-' : ' request-'
         x = x.replace(/^http-(?:request|response)\s+/, '').replace(/\s+header-/, hdtype)
-        HeaderRewrite.push(mark + `${noteK4}- >-${noteKn6}` + x)
+        HeaderRewrite.push(stashMark + `${noteK4}- >-${noteKn6}` + x)
         break
+      }
     } //headerRewrite输出结束
   } //for
 
@@ -1545,6 +1589,13 @@ if (binaryInfo != null && binaryInfo.length > 0) {
         break
     } //switch
   } //Mock输出for
+
+  // Loon 3.5.1+ Rewrite v2：将旧版 URL Rewrite/Header Rewrite/Body Rewrite
+  // 在语义可表达时升级为原生 Action。已经是 v2 的行保持原样；无法等价
+  // 表达的旧语法也保留，并给出诊断，避免“转换成功但规则消失”。
+  if (isLooniOS && URLRewrite.length > 0) {
+    URLRewrite = upgradeLegacyLoonV2RewriteLines(URLRewrite)
+  }
 
   //Panel输出
   if (isSurgeiOS && panelBox.length > 0) {
@@ -1643,38 +1694,50 @@ if (binaryInfo != null && binaryInfo.length > 0) {
         case 'surge-module':
         case 'shadowrocket-module':
         case 'loon-plugin':
-          rebody = rebody ? ', requires-body=' + rebody : ''
-          proto = proto ? ', binary-body-mode=' + proto : ''
-          size = size ? ', max-size=' + size : ''
-          timeout = timeout ? ', timeout=' + timeout : ''
-          engine = engine && isSurgeiOS ? ', engine=' + engine : ''
-          jsenable = jsenable && isLooniOS ? ', enable=' + jsenable : ''
-          if (jsarg != '' && /,/.test(jsarg) && !/^".+"$/.test(jsarg) && !isLoonArgumentContainer(jsarg))
-            jsarg = ', argument="' + jsarg + '"'
-          if (jsarg != '' && (!/,/.test(jsarg) || /^".+"$/.test(jsarg) || isLoonArgumentContainer(jsarg)))
-            jsarg = ', argument=' + jsarg
+          if (!isLooniOS) {
+            rebody = rebody ? ', requires-body=' + rebody : ''
+            proto = proto ? ', binary-body-mode=' + proto : ''
+            size = size ? ', max-size=' + size : ''
+            timeout = timeout ? ', timeout=' + timeout : ''
+            engine = engine && isSurgeiOS ? ', engine=' + engine : ''
+            jsenable = jsenable && isLooniOS ? ', enable=' + jsenable : ''
+            if (jsarg != '' && /,/.test(jsarg) && !/^".+"$/.test(jsarg) && !isLoonArgumentContainer(jsarg))
+              jsarg = ', argument="' + jsarg + '"'
+            if (jsarg != '' && (!/,/.test(jsarg) || /^".+"$/.test(jsarg) || isLoonArgumentContainer(jsarg)))
+              jsarg = ', argument=' + jsarg
+          }
 
           if (/generic/.test(jstype) && isShadowrocket) {
             otherRule.push(ori)
-          } else if (/request|response|network-changed|generic/.test(jstype) && isLooniOS) {
-            ;/[=,]\s*type\s*=\s*generic/.test(ori)
-              ? otherRule.push(ori)
-              : script.push(
-                  mark +
-                    noteK +
-                    jstype +
-                    jsptn +
-                    ' script-path=' +
-                    jsurl +
-                    rebody +
-                    proto +
-                    timeout +
-                    ', tag=' +
-                    jsname +
-                    jsenable +
-                    img +
-                    jsarg
-                )
+          } else if (isLooniOS && /request|response|network-changed|generic|event|cron/.test(jstype)) {
+            const conversion = formatLegacyScriptAsLoonV2({
+              mark,
+              noteK,
+              jstype,
+              jsptn,
+              jsurl,
+              jsname,
+              img,
+              tilesicon,
+              jsarg,
+              rebody,
+              proto,
+              timeout,
+              jsenable,
+              cronexp,
+              eventname,
+              engine,
+              size,
+              ability,
+              updatetime,
+              wakesys,
+              warnings: [],
+            })
+            if (conversion.line) script.push(conversion.line)
+            if (conversion.warnings?.length > 0) {
+              conversion.warnings.forEach(warning => loonV2Warnings.push(`${ori} → ${warning}`))
+            }
+            if (conversion.unsupported) otherRule.push(`${ori} [Loon v2: ${conversion.unsupported}]`)
           } else if (/request|response|generic/.test(jstype) && (isSurgeiOS || isShadowrocket)) {
             ;/^generic\s/.test(ori) && !loonV2NormalizedLines.has(ori)
               ? otherRule.push(ori)
@@ -1730,25 +1793,6 @@ if (binaryInfo != null && binaryInfo.length > 0) {
                 engine +
                 timeout +
                 wakesys +
-                jsarg
-            )
-          } else if (jstype == 'cron' && isLooniOS) {
-            const loonCronexp = /^\{[^{}]+\}$/.test(`${cronexp ?? ''}`.trim())
-              ? `${cronexp ?? ''}`.trim()
-              : `"${`${cronexp ?? ''}`.replace(/"/g, '')}"`
-            script.push(
-              mark +
-                noteK +
-                jstype +
-                ' ' +
-                loonCronexp +
-                ' script-path=' +
-                jsurl +
-                timeout +
-                ', tag=' +
-                jsname +
-                jsenable +
-                img +
                 jsarg
             )
           } else if (/dns|rule/.test(jstype) && (isSurgeiOS || isShadowrocket)) {
@@ -1993,14 +2037,18 @@ ${MITM}
 
       let StashBodyRewrite = []
       for (let i = 0; i < rwbodyBox.length; i++) {
-        const { type, regex, value } = rwbodyBox[i]
+        const { type, regex, value, mark = '', noteK = '' } = rwbodyBox[i]
+        const line = `${regex} ${type.replace(/^http-/, '').replace(/^(request|response)$/, '$1-replace-regex')} ${
+          value.replace(/^"(.+)"$/, '$1').replace(/^'(.+)'$/, '$1')
+          //.split(' ')
+          //.map(i => i.replace(/^"(.+)"$/, '$1').replace(/^'(.+)'$/, '$1'))
+          //.join(' ')
+        }`
+        const disabled = noteK === '#' || mark === '#'
         StashBodyRewrite.push(
-          `    - >-\n      ${regex} ${type.replace(/^http-/, '').replace(/^(request|response)$/, '$1-replace-regex')} ${
-            value.replace(/^"(.+)"$/, '$1').replace(/^'(.+)'$/, '$1')
-            //.split(' ')
-            //.map(i => i.replace(/^"(.+)"$/, '$1').replace(/^'(.+)'$/, '$1'))
-            //.join(' ')
-          }`
+          disabled
+            ? `    # - >-\n    #   ${line}`
+            : `${mark}    - >-\n      ${line}`
         )
       }
       if (StashBodyRewrite.length > 0) {
@@ -2072,7 +2120,10 @@ ${providers}
       body = body.replaceAll(e, r)
     } //for
     for (const key of surgeTemplateKeys) {
-      body = body.replaceAll('{' + key + '}', '{{{' + key + '}}}')
+      // Only wrap a standalone single-brace token. A triple-brace token
+      // already contains the same `{key}` substring and must not be wrapped twice.
+      const token = new RegExp(`(?<!\\{)\\{${escapeRegExp(key)}\\}(?!\\})`, 'g')
+      body = body.replace(token, '{{{' + key + '}}}')
     }
   } else if (isLooniOS) {
     body = body.replaceAll('{{{', '{').replaceAll('}}}', '}')
@@ -2145,9 +2196,34 @@ function isNoteK(x) {
   return /^#/.test(x) ? '#' : ''
 }
 
+function hasKeyword(list, line) {
+  return list?.some(item => item.trim() && line.includes(item.trim()))
+}
+
+// Disabled rewrite/script lines are rules in their own right, not comments
+// annotating the next active rule. Keep them from being re-attached by the
+// legacy mark mechanism when del=false preserves them in the output.
+function isCommentedRuleLine(line) {
+  const source = `${line ?? ''}`.trim().replace(/^#\s*/, '')
+  if (!source) return false
+  return (
+    /^(?:request|response)\s+if\b/i.test(source) ||
+    /^(?:cron|network-changed|generic)\s+(?:if\b|then\b)/i.test(source) ||
+    /^http-(?:request|response)(?:-jq)?\s+/i.test(source) ||
+    /^(?:\^|https?:\/\/).+\s+url\s+/i.test(source) ||
+    /\s+url\s+(?:reject|302|307|header|(?:request|response)-)/i.test(source) ||
+    /\s+(?:request|response)-(?:header|body)(?:-json)?(?:-jq)?\s+/i.test(source)
+  )
+}
+
 //获取当前内容的注释
 function getMark(index, obj) {
-  let mark = obj[index - 1]?.match(/^#(?!!)/) ? obj[index - 1] + '\n' : ''
+  // `del=true` removes commented entries before parsing. Do not re-attach the
+  // raw source comment as a mark to the following active Rewrite/Script entry.
+  if (delNoteSc) return ''
+
+  const previous = obj[index - 1]
+  let mark = previous?.match(/^#(?!!)/) && !isCommentedRuleLine(previous) ? previous + '\n' : ''
   // let mark = ''
 
   // for (let i = index - 1; i >= 0; i--) {
@@ -2207,6 +2283,7 @@ function splitLoonV2TopLevel(str, sep = ',') {
   const arr = []
   let current = ''
   let quote = ''
+  let regex = false
   let escaped = false
   let braceDepth = 0
   let bracketDepth = 0
@@ -2224,8 +2301,20 @@ function splitLoonV2TopLevel(str, sep = ',') {
       }
       continue
     }
+    if (regex) {
+      current += char
+      if (escaped) escaped = false
+      else if (char === '\\') escaped = true
+      else if (char === '/') regex = false
+      continue
+    }
     if (char === '"' || char === "'" || char === '`') {
       quote = char
+      current += char
+      continue
+    }
+    if (char === '/' && /(?:\(|,|\[)\s*$/.test(str.slice(0, i))) {
+      regex = true
       current += char
       continue
     }
@@ -2653,7 +2742,7 @@ function splitLoonV2ActionList(str) {
       current += char
       continue
     }
-    if (char === '/' && /(?:\(|,)\s*$/.test(str.slice(0, i))) {
+    if (char === '/' && /(?:\(|,|\[)\s*$/.test(str.slice(0, i))) {
       regex = true
       current += char
       continue
@@ -2748,7 +2837,7 @@ function findLoonV2ActionClosingParen(str, openIndex) {
       quote = char
       continue
     }
-    if (char === '/' && /(?:\(|,)\s*$/.test(str.slice(0, i))) {
+    if (char === '/' && /(?:\(|,|\[)\s*$/.test(str.slice(0, i))) {
       regex = true
       continue
     }
@@ -2793,17 +2882,154 @@ function parseLoonV2LiteralList(value, field) {
   const raw = `${value ?? ''}`.trim()
   if (!raw.startsWith('[') || !raw.endsWith(']')) {
     const item = parseLoonV2Literal(raw, field)
-    return item.reason ? item : { values: [item.value] }
+    return item.reason ? item : { values: [item.value], isArray: false }
   }
   const inner = raw.slice(1, -1).trim()
-  if (!inner) return { values: [] }
+  if (!inner) return { values: [], isArray: true }
   const values = []
   for (const item of splitLoonV2TopLevel(inner)) {
     const parsed = parseLoonV2Literal(item, field)
     if (parsed.reason) return parsed
     values.push(parsed.value)
   }
-  return { values }
+  return { values, isArray: true }
+}
+
+function parseLoonV2RegexLiteral(value, field) {
+  const raw = `${value ?? ''}`.trim()
+  if (!raw.startsWith('/')) return { reason: `${field} 必须是正则字面量` }
+
+  let escaped = false
+  let closing = -1
+  for (let i = 1; i < raw.length; i++) {
+    const char = raw[i]
+    if (char === '/' && !escaped) {
+      closing = i
+      break
+    }
+    if (escaped) escaped = false
+    else if (char === '\\') escaped = true
+  }
+  if (closing === -1) return { reason: `${field} 正则缺少结束分隔符 /` }
+
+  const pattern = raw.slice(1, closing)
+  const flags = raw.slice(closing + 1).trim()
+  if (/[^ims]/.test(flags) || new Set(flags).size !== flags.length) {
+    return { reason: `${field} 仅支持 Loon v2 的 i、m、s 正则标记` }
+  }
+  if (/\r|\n/.test(pattern)) return { reason: `${field} 正则不能跨行` }
+  return { value: flags ? `(?${flags})${pattern}` : pattern }
+}
+
+function parseLoonV2RegexList(value, field) {
+  const raw = `${value ?? ''}`.trim()
+  if (!raw.startsWith('[') || !raw.endsWith(']')) {
+    const parsed = parseLoonV2RegexLiteral(raw, field)
+    return parsed.reason ? parsed : { values: [parsed.value], isArray: false }
+  }
+  const inner = raw.slice(1, -1).trim()
+  if (!inner) return { values: [], isArray: true }
+  const values = []
+  for (const item of splitLoonV2TopLevel(inner)) {
+    const parsed = parseLoonV2RegexLiteral(item, field)
+    if (parsed.reason) return parsed
+    values.push(parsed.value)
+  }
+  return { values, isArray: true }
+}
+
+function parseLoonV2StringList(value, field) {
+  const parsed = parseLoonV2LiteralList(value, field)
+  if (parsed.reason) return parsed
+  if (parsed.values.some(item => typeof item !== 'string')) {
+    return { reason: `${field} 必须是字符串` }
+  }
+  return parsed
+}
+
+function validateLoonV2PairedLists(first, second, label) {
+  if (first.isArray !== second.isArray) {
+    return { reason: `${label} 不能混用单值和数组` }
+  }
+  if (first.values.length === 0 || first.values.length !== second.values.length) {
+    return { reason: `${label} 的批量参数不能为空或长度不一致` }
+  }
+  return {}
+}
+
+function loonV2MockContentTypeHeader(contentType) {
+  const headers = {
+    json: 'Content-Type:application/json',
+    text: 'Content-Type:text/plain',
+    css: 'Content-Type:text/css',
+    html: 'Content-Type:text/html',
+    javascript: 'Content-Type:text/javascript',
+    plain: 'Content-Type:text/plain',
+    png: 'Content-Type:image/png',
+    gif: 'Content-Type:image/gif',
+    jpeg: 'Content-Type:image/jpeg',
+    tiff: 'Content-Type:image/tiff',
+    svg: 'Content-Type:image/svg+xml',
+    mp4: 'Content-Type:video/mp4',
+    'form-data': 'Content-Type:application/x-www-form-urlencoded',
+  }
+  return headers[contentType] || ''
+}
+
+function parseLoonV2BodyMockAction(name, phase, args) {
+  const contentType = parseLoonV2Literal(args[0], `${name} 内容类型`)
+  const source = parseLoonV2Literal(args[1], `${name} Body 或资源路径`)
+  const supportedTypes = new Set([
+    'json',
+    'text',
+    'css',
+    'html',
+    'javascript',
+    'plain',
+    'png',
+    'gif',
+    'jpeg',
+    'tiff',
+    'svg',
+    'mp4',
+    'form-data',
+  ])
+  if (contentType.reason || source.reason) return { reason: contentType.reason || source.reason }
+  if (typeof contentType.value !== 'string' || !supportedTypes.has(contentType.value)) {
+    return { reason: `${name} 内容类型不受支持` }
+  }
+  if (typeof source.value !== 'string' || !source.value) {
+    return { reason: `${name} Body 或资源路径必须是非空字符串` }
+  }
+
+  const isFile = name.endsWith('_file')
+  let status = 200
+  let base64 = false
+  if (phase === 'request') {
+    if (args.length > 3) return { reason: `${name} 最多接受三个参数` }
+    if (args.length === 3) {
+      const encoded = parseLoonV2Literal(args[2], `${name} Base64 标记`)
+      if (encoded.reason || typeof encoded.value !== 'boolean') {
+        return { reason: `${name} 的第三个参数必须是 Boolean` }
+      }
+      base64 = encoded.value
+    }
+  } else {
+    if (args.length > 4 || args.length < 2) return { reason: `${name} 参数数量无效` }
+    if (args.length >= 3) {
+      const parsedStatus = parseLoonV2Status(args[2], name)
+      if (parsedStatus.reason) return parsedStatus
+      status = parsedStatus.value
+    }
+    if (args.length === 4) {
+      const encoded = parseLoonV2Literal(args[3], `${name} Base64 标记`)
+      if (encoded.reason || typeof encoded.value !== 'boolean') {
+        return { reason: `${name} 的第四个参数必须是 Boolean` }
+      }
+      base64 = encoded.value
+    }
+  }
+  return { contentType: contentType.value, source: source.value, isFile, status, base64 }
 }
 
 function parseLoonV2JsonPaths(value) {
@@ -2919,14 +3145,18 @@ function pushLoonV2HeaderRewrite(phase, pattern, action, args, mark = '') {
     return {}
   }
 
-  if (name === 'replace_regex') {
-    if (args.length !== 3) return { reason: 'header.replace_regex 需要名称、正则和替换值' }
+  if (name === 'replace' || name === 'replace_regex') {
+    if (args.length !== 3) return { reason: `header.${name} 需要名称、正则和替换值` }
     const fields = parseLoonV2LiteralList(args[0], 'Header 名称')
-    const regexes = parseLoonV2LiteralList(args[1], 'Header 正则')
-    const replacements = parseLoonV2LiteralList(args[2], 'Header 替换值')
+    const regexes = parseLoonV2RegexList(args[1], 'Header 正则')
+    const replacements = parseLoonV2StringList(args[2], 'Header 替换值')
     if (fields.reason || regexes.reason || replacements.reason) return { reason: fields.reason || regexes.reason || replacements.reason }
-    if (fields.values.length !== regexes.values.length || fields.values.length !== replacements.values.length) {
-      return { reason: 'header.replace_regex 的批量参数长度不一致' }
+    const paired = validateLoonV2PairedLists(fields, regexes, `header.${name}`)
+    if (paired.reason) return paired
+    const pairedReplacements = validateLoonV2PairedLists(fields, replacements, `header.${name}`)
+    if (pairedReplacements.reason) return pairedReplacements
+    if (fields.values.some(item => typeof item !== 'string')) {
+      return { reason: `header.${name} 的名称必须是字符串` }
     }
     fields.values.forEach((field, i) =>
       addLine('header-replace-regex', [quoteSurgeField(field), quoteSurgeField(regexes.values[i]), quoteSurgeField(replacements.values[i])])
@@ -2953,7 +3183,7 @@ function pushLoonV2HeaderRewrite(phase, pattern, action, args, mark = '') {
   return {}
 }
 
-async function normalizeLoonV2RewriteLine(line, targetApp, sourceNum) {
+async function normalizeLoonV2RewriteLine(line, targetApp, sourceNum, markOverride) {
   const source = `${line ?? ''}`.trim()
   if (!source || /^(#|;|\/\/)/.test(source)) return null
   const match = source.match(/^(request|response)\s+if\s+([\s\S]+?)\s+then\s+([\s\S]+)$/i)
@@ -2967,7 +3197,7 @@ async function normalizeLoonV2RewriteLine(line, targetApp, sourceNum) {
   if (condition.reason) return { unsupported: true, reason: condition.reason }
   const pattern = condition.pattern
   const phase = match[1].toLowerCase()
-  const mark = getMark(sourceNum, body)
+  const mark = markOverride === undefined ? getMark(sourceNum, body) : markOverride
   const actions = splitLoonV2ActionList(match[3])
   if (actions.some(action => !action)) return { unsupported: true, reason: 'then 后存在空 Action' }
   const parsedActions = []
@@ -2978,6 +3208,28 @@ async function normalizeLoonV2RewriteLine(line, targetApp, sourceNum) {
   }
   // 混合 legacy script 与原生 Action 时交还旧解析器，避免先写入一半转换结果。
   if (parsedActions.some(action => action.name === 'script')) return null
+
+  const mockActions = parsedActions.filter(action => new RegExp(`^${phase}\\.body\\.mock(?:_file)?$`).test(action.name))
+  if (mockActions.length > 0) {
+    if (phase === 'response') {
+      if (mockActions.length !== 1) {
+        return { unsupported: true, reason: 'response.body.mock 与 mock_file 只能在一条 Rewrite 中使用一次' }
+      }
+      const invalidResponseAction = parsedActions.find(
+        action =>
+          !/^response\.header\.(?:add|set|del|replace|replace_regex)$/.test(action.name) &&
+          !/^response\.body\.mock(?:_file)?$/.test(action.name)
+      )
+      if (invalidResponseAction) {
+        return {
+          unsupported: true,
+          reason: 'response.body.mock 除 response.header.* 外不能与其他 Action 组合',
+        }
+      }
+    } else if (mockActions.length !== 1) {
+      return { unsupported: true, reason: 'request.body.mock 与 mock_file 只能在一条 Rewrite 中使用一次' }
+    }
+  }
   const warnings = []
 
   for (const parsed of parsedActions) {
@@ -3055,19 +3307,59 @@ async function normalizeLoonV2RewriteLine(line, targetApp, sourceNum) {
       continue
     }
 
-    const bodyMatch = name.match(/^(request|response)\.body\.(replace|mock)$/)
+    const bodyMatch = name.match(/^(request|response)\.body\.(replace|mock|mock_file)$/)
     if (bodyMatch) {
       if (bodyMatch[1] !== phase) return { unsupported: true, reason: `${name} 与 ${phase} 阶段不匹配` }
-      if (args.length !== 2) return { unsupported: true, reason: `${name} 当前需要正则和替换值两个参数` }
-      const regex = parseLoonV2Literal(args[0], `${name} 正则`)
-      const replacement = parseLoonV2Literal(args[1], `${name} 替换值`)
-      if (regex.reason || replacement.reason) return { unsupported: true, reason: regex.reason || replacement.reason }
-      rwbodyBox.push({
-        type: `http-${phase}`,
-        regex: pattern,
-        value: `${quoteSurgeField(regex.value)} ${quoteSurgeField(replacement.value)}`,
-        mark,
-      })
+      if (bodyMatch[2] === 'replace') {
+        if (args.length !== 2) return { unsupported: true, reason: `${name} 需要正则和替换值两个参数` }
+        const regexes = parseLoonV2RegexList(args[0], `${name} 正则`)
+        const replacements = parseLoonV2StringList(args[1], `${name} 替换值`)
+        if (regexes.reason || replacements.reason) {
+          return { unsupported: true, reason: regexes.reason || replacements.reason }
+        }
+        const paired = validateLoonV2PairedLists(regexes, replacements, name)
+        if (paired.reason) return { unsupported: true, reason: paired.reason }
+        for (let i = 0; i < regexes.values.length; i++) {
+          rwbodyBox.push({
+            type: `http-${phase}`,
+            regex: pattern,
+            value: `${quoteSurgeField(regexes.values[i])} ${quoteSurgeField(replacements.values[i])}`,
+            mark,
+          })
+        }
+        continue
+      }
+
+      const mock = parseLoonV2BodyMockAction(name, phase, args)
+      if (mock.reason) return { unsupported: true, reason: mock.reason }
+      if (phase === 'response') {
+        if (mock.isFile && mock.base64) {
+          return { unsupported: true, reason: `${name} 的远程/资源文件 Base64 模式无法由 Surge Map Local 等价表示` }
+        }
+        const mapType = mock.base64 ? 'base64' : mock.isFile ? 'file' : 'text'
+        pushLoonV2MapLocal(
+          pattern,
+          mapType,
+          mock.source,
+          mock.status,
+          loonV2MockContentTypeHeader(mock.contentType),
+          mark
+        )
+      } else {
+        if (mock.isFile) {
+          return { unsupported: true, reason: `${name} 的资源文件无法直接转换为 Surge 请求 Body` }
+        }
+        if (mock.base64) {
+          return { unsupported: true, reason: `${name} 的 Base64 请求 Body 没有等价的 Surge Body Rewrite 输出` }
+        }
+        rwbodyBox.push({
+          type: 'http-request',
+          regex: pattern,
+          value: `${quoteSurgeField('(?s)^.*$')} ${quoteSurgeField(mock.source)}`,
+          mark,
+        })
+        warnings.push(`${name} 已转换为请求 Body 全量替换；目标客户端不保留原始 Content-Type 声明`)
+      }
       continue
     }
 
@@ -3251,30 +3543,52 @@ function getArgumentDefaultValue(item) {
   return stripWrapQuote(splitTopLevel(value, ',')[0] || value).trim()
 }
 
-function collectUsedArgumentKeys(jsBox, hnBox = []) {
-  const keys = new Set()
-  for (let i = 0; i < jsBox.length; i++) {
-    ;['jsarg', 'jsenable', 'cronexp'].forEach(field => {
-      getTemplateKeys(jsBox[i][field] || '').forEach(key => keys.add(key))
+function collectArgumentUsage(jsBox, hnBox = [], nativeLines = []) {
+  const usage = { all: new Set(), active: new Set(), commented: new Set() }
+  const collect = (value, isCommented) => {
+    getTemplateKeys(value || '').forEach(key => {
+      usage.all.add(key)
+      usage[isCommented ? 'commented' : 'active'].add(key)
     })
+  }
+  for (let i = 0; i < jsBox.length; i++) {
+    const isCommented = jsBox[i].noteK == '#'
+    ;['jsarg', 'jsenable', 'cronexp'].forEach(field => collect(jsBox[i][field], isCommented))
   }
   for (let i = 0; i < hnBox.length; i++) {
     const key = getHnToggleKey(hnBox[i])
-    key && keys.add(key)
+    if (key) usage.all.add(key), usage.active.add(key)
   }
-  return keys
+  for (let i = 0; i < nativeLines.length; i++) {
+    const line = nativeLines[i].line || ''
+    collect(line, /^#/.test(line))
+  }
+  return usage
 }
 
-function filterLoonArguments(args, jsBox, hnBox = []) {
-  const usedKeys = collectUsedArgumentKeys(jsBox, hnBox)
-  return args.filter(item => {
-    const sourceKey = item.key
-    const targetKey = argumentKeyRenameMap.get(sourceKey) || sourceKey
-    const defaultValue = getArgumentDefaultValue(item)
-    if (!usedKeys.has(sourceKey) && !usedKeys.has(targetKey)) return false
-    if (defaultValue === '--' && sourceKey === targetKey) return false
-    return true
-  })
+function filterLoonArguments(args, jsBox, hnBox = [], nativeLines = []) {
+  const usage = collectArgumentUsage(jsBox, hnBox, nativeLines)
+  return args
+    .filter(item => {
+      const sourceKey = item.key
+      const targetKey = argumentKeyRenameMap.get(sourceKey) || sourceKey
+      const defaultValue = getArgumentDefaultValue(item)
+      if (!usage.all.has(sourceKey) && !usage.all.has(targetKey)) return false
+      if (defaultValue === '--' && sourceKey === targetKey) return false
+      return true
+    })
+    .map(item => {
+      const sourceKey = item.key
+      const targetKey = argumentKeyRenameMap.get(sourceKey) || sourceKey
+      const keys = [sourceKey, targetKey]
+      const active = keys.some(key => usage.active.has(key))
+      const commented = keys.some(key => usage.commented.has(key))
+      // An explicit exclusion on the Argument declaration takes precedence
+      // over usage discovered in an active Script. Otherwise x can target
+      // only the Argument line and the retained declaration loses its '#'.
+      const noteK = item.noteK == '#' ? '#' : active ? '' : commented ? '#' : ''
+      return { ...item, noteK }
+    })
 }
 
 function getLoonArgumentKeys(str) {
@@ -3363,6 +3677,614 @@ function formatCronexp(value, targetApp) {
     return `"${value}"`
   }
   return /,/.test(value) ? `"${value}"` : value
+}
+
+function formatLoonV2UrlRegexFromLegacy(pattern) {
+  let raw = stripWrapQuote(`${pattern ?? ''}`.trim()).replace(/\\x20/g, ' ')
+  if (!raw) return null
+
+  const inlineFlags = raw.match(/^\(\?([ims]+)\)([\s\S]*)$/i)
+  let flags = 'i'
+  if (inlineFlags) {
+    flags = inlineFlags[1].toLowerCase()
+    raw = inlineFlags[2]
+  }
+
+  if (raw.startsWith('/') && raw.lastIndexOf('/') > 0) {
+    const closing = raw.lastIndexOf('/')
+    const literalFlags = raw.slice(closing + 1).trim()
+    if (/^[ims]*$/i.test(literalFlags)) {
+      flags = literalFlags || flags
+      raw = raw.slice(1, closing)
+    }
+  }
+
+  let output = ''
+  let escaped = false
+  for (const char of raw) {
+    if (char === '/' && !escaped) output += '\\/'
+    else output += char
+    if (escaped) escaped = false
+    else if (char === '\\') escaped = true
+  }
+  return `/${output}/${flags}`
+}
+
+function formatLoonV2FixedString(value) {
+  const raw = stripWrapQuote(`${value ?? ''}`.trim()).replace(/\\x20/g, ' ')
+  return /[\r\n]/.test(raw) ? null : JSON.stringify(raw)
+}
+
+function formatLoonV2TemplateFromLegacy(value) {
+  const raw = `${value ?? ''}`.trim()
+  if (/^\$\{[^{}]+\}$/.test(raw)) return raw
+  const matched = raw.match(/^\{\{\{([^{}]+)\}\}\}$|^\{([^{}]+)\}$/)
+  return matched ? '${' + (matched[1] || matched[2]).trim() + '}' : null
+}
+
+function formatLoonV2BooleanFromLegacy(value) {
+  const raw = `${value ?? ''}`.trim()
+  const template = formatLoonV2TemplateFromLegacy(raw)
+  if (template) return template
+  if (/^(true|false)$/i.test(raw)) return raw.toLowerCase()
+  return null
+}
+
+function formatLoonV2TimeoutFromLegacy(value) {
+  const raw = `${value ?? ''}`.trim()
+  const template = formatLoonV2TemplateFromLegacy(raw)
+  if (template) return template
+  const scalar = stripWrapQuote(raw)
+  if (!/^\+?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:e[+-]?\d+)?$/i.test(scalar)) return null
+  if (!Number.isFinite(Number(scalar)) || Number(scalar) <= 0) return null
+  return scalar
+}
+
+function formatLoonV2PluginObject(keys) {
+  const normalized = keys.map(item => `${item ?? ''}`.trim()).filter(Boolean)
+  if (normalized.length === 0 || new Set(normalized).size !== normalized.length) return null
+  if (normalized.some(key => !/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(key))) return null
+  return '{' + normalized.map(key => '${' + key + '}').join(', ') + '}'
+}
+
+function formatLoonV2ArgumentFromLegacy(value) {
+  let raw = `${value ?? ''}`.trim()
+  if (!raw) return ''
+
+  try {
+    const decoded = decodeURIComponent(raw)
+    if (decoded && decoded !== raw && (decoded.startsWith('[') || decoded.startsWith('{'))) raw = decoded
+  } catch (e) {}
+
+  const listMatch = raw.match(/^\[([\s\S]*)\]$/)
+  if (listMatch) {
+    const keys = splitLoonV2TopLevel(listMatch[1])
+      .map(item => item.match(/^\s*\{+\s*\$?\{?\s*([^{}]+?)\s*\}?\s*\}+\s*$/)?.[1])
+      .filter(Boolean)
+    const object = formatLoonV2PluginObject(keys)
+    if (object) return object
+  }
+
+  if (/^\{[\s\S]*\}$/.test(raw)) {
+    const objectKeys = raw
+      .slice(1, -1)
+      .split(/[,&]/)
+      .map(item => item.match(/^\s*(?:[^:=]+\s*:\s*)?\$?\{?([^{}]+)\}?\s*$/)?.[1])
+      .filter(Boolean)
+    const object = formatLoonV2PluginObject(objectKeys)
+    if (object) return object
+  }
+
+  const pairs = parseSurgeTemplateArgumentPairs(raw, new Map())
+  if (pairs.length > 0) return formatLoonV2PluginObject(pairs.map(item => item.scriptKey))
+
+  const quoted = unwrapLoonV2String(raw)
+  return JSON.stringify(quoted == null ? stripWrapQuote(raw) : quoted)
+}
+
+function formatLegacyScriptAsLoonV2(fields) {
+  let type = `${fields.jstype ?? ''}`.toLowerCase()
+  if (type === 'http-request') type = 'request'
+  if (type === 'http-response') type = 'response'
+  if (type === 'event') {
+    if (fields.eventname && fields.eventname !== 'network-changed') {
+      return { unsupported: `事件触发器 ${fields.eventname} 没有 Loon v2 等价语法` }
+    }
+    type = 'network-changed'
+  }
+  if (!['request', 'response', 'cron', 'network-changed', 'generic'].includes(type)) {
+    return { unsupported: `脚本触发器 ${fields.jstype || '未知'} 没有 Loon v2 等价语法` }
+  }
+
+  let trigger
+  if (type === 'request' || type === 'response') {
+    const regex = formatLoonV2UrlRegexFromLegacy(fields.jsptn)
+    if (!regex) return { unsupported: `${type} Script 缺少可转换的 URL 条件` }
+    trigger = `${type} if \${url} ~= ${regex}`
+  } else if (type === 'cron') {
+    const cron = formatLoonV2TemplateFromLegacy(fields.cronexp) || stripWrapQuote(`${fields.cronexp ?? ''}`.trim())
+    if (!cron) return { unsupported: 'Cron Script 缺少 Cron 表达式' }
+    trigger = /^\$\{[^{}]+\}$/.test(cron) ? `cron ${cron}` : `cron ${JSON.stringify(cron)}`
+  } else {
+    trigger = type
+  }
+
+  const scriptPath = formatLoonV2FixedString(fields.jsurl)
+  if (!scriptPath) return { unsupported: 'Script 路径为空或包含换行' }
+  const argument = formatLoonV2ArgumentFromLegacy(fields.jsarg)
+  const action = `script(${scriptPath}${argument ? `, ${argument}` : ''})`
+  const options = []
+
+  const tag = formatLoonV2FixedString(fields.jsname)
+  if (tag) options.push(`tag=${tag}`)
+
+  const timeoutValue = formatLoonV2TimeoutFromLegacy(fields.timeout)
+  if (fields.timeout) {
+    if (timeoutValue) options.push(`timeout=${timeoutValue}`)
+    else fields.warnings.push('timeout 无法转换为 Loon v2 正数，已使用默认值')
+  }
+
+  const enable = formatLoonV2BooleanFromLegacy(fields.jsenable)
+  if (fields.jsenable) {
+    if (enable) options.push(`enable=${enable}`)
+    else fields.warnings.push('enable 无法转换为 Loon v2 Boolean，已省略')
+  }
+
+  const imgUrl = fields.img || fields.tilesicon
+  if (imgUrl) {
+    const img = formatLoonV2FixedString(imgUrl)
+    if (img) options.push(`img_url=${img}`)
+    else fields.warnings.push('img-url 无法转换为 Loon v2 固定字符串，已省略')
+  }
+
+  if (type === 'request' || type === 'response') {
+    const requiresBody = formatLoonV2BooleanFromLegacy(fields.rebody)
+    const binaryBody = formatLoonV2BooleanFromLegacy(fields.proto)
+    if (fields.rebody) {
+      if (requiresBody) options.push(`requires_body=${requiresBody}`)
+      else fields.warnings.push('requires-body 无法转换为 Loon v2 Boolean，已省略')
+    }
+    if (fields.proto) {
+      if (binaryBody) options.push(`binary_body_mode=${binaryBody}`)
+      else fields.warnings.push('binary-body-mode 无法转换为 Loon v2 Boolean，已省略')
+    }
+  }
+
+  ;[
+    ['engine', fields.engine],
+    ['max-size', fields.size],
+    ['ability', fields.ability],
+    ['script-update-interval', fields.updatetime],
+    ['wake-system', fields.wakesys],
+  ].forEach(([name, value]) => {
+    if (value) fields.warnings.push(`${name} 在 Loon v2 Script 中没有等价字段，已省略`)
+  })
+
+  const line = `${fields.mark || ''}${fields.noteK || ''}${trigger} then ${action}${
+    options.length > 0 ? ` with ${options.join(', ')}` : ''
+  }`
+  return { line }
+}
+
+function splitLegacyLoonV2Fields(value) {
+  const fields = []
+  let current = ''
+  let quote = ''
+  let escaped = false
+  const backtick = String.fromCharCode(96)
+  const source = String(value ?? '').trim()
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i]
+    if (quote) {
+      current += char
+      if (escaped) escaped = false
+      else if (char === '\\') escaped = true
+      else if (char === quote) quote = ''
+      continue
+    }
+    if (char === '"' || char === "'" || char === backtick) {
+      quote = char
+      current += char
+    } else if (/\s/.test(char)) {
+      if (current) {
+        fields.push(current)
+        current = ''
+      }
+    } else {
+      current += char
+    }
+  }
+  if (current) fields.push(current)
+  return fields
+}
+
+function splitLegacyLoonV2Prefix(line) {
+  let source = String(line ?? '')
+  let mark = ''
+  while (/^#(?!#)[^\r\n]*\r?\n/.test(source)) {
+    const newline = source.indexOf('\n')
+    mark += source.slice(0, newline + 1)
+    source = source.slice(newline + 1)
+  }
+  const disabled = /^#/.test(source) && !/^#!/.test(source)
+  if (disabled) source = source.slice(1)
+  return { source: source.trim(), mark, disabled }
+}
+
+function unwrapLegacyLoonV2Value(value) {
+  const raw = String(value ?? '').trim().replace(/\\x20/g, ' ')
+  const unwrapped = unwrapLoonV2String(raw)
+  return stripWrapQuote(unwrapped == null ? raw : unwrapped)
+}
+
+function formatLegacyLoonV2StringArgument(value) {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  const template = formatLoonV2TemplateFromLegacy(raw)
+  if (template) return template
+  const text = unwrapLegacyLoonV2Value(raw)
+  return /[\r\n]/.test(text) ? null : JSON.stringify(text)
+}
+
+function formatLegacyLoonV2RegexArgument(value) {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  if (raw.startsWith('/')) {
+    const closing = raw.lastIndexOf('/')
+    const flags = closing > 0 ? raw.slice(closing + 1).trim() : ''
+    if (closing > 0 && /^[ims]*$/i.test(flags)) return raw
+  }
+  const text = unwrapLegacyLoonV2Value(raw)
+  if (!text || /[\r\n]/.test(text)) return null
+  let pattern = ''
+  let escaped = false
+  for (const char of text) {
+    if (char === '/' && !escaped) pattern += '\\/'
+    else pattern += char
+    if (escaped) escaped = false
+    else if (char === '\\') escaped = true
+  }
+  return '/' + pattern + '/'
+}
+
+function formatLegacyLoonV2JsonValue(value) {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  const template = formatLoonV2TemplateFromLegacy(raw)
+  if (template) return template
+  const text = unwrapLegacyLoonV2Value(raw)
+  if (/[\r\n]/.test(text)) return null
+  try {
+    return JSON.stringify(JSON.parse(text))
+  } catch (e) {
+    return JSON.stringify(text)
+  }
+}
+
+function formatLegacyLoonV2StringArray(values) {
+  const formatted = values.map(formatLegacyLoonV2StringArgument)
+  return formatted.some(value => !value) ? null : '[' + formatted.join(', ') + ']'
+}
+
+function formatLegacyLoonV2JsonValueArray(values) {
+  const formatted = values.map(formatLegacyLoonV2JsonValue)
+  return formatted.some(value => !value) ? null : '[' + formatted.join(', ') + ']'
+}
+
+function parseLegacyLoonKeyValueFields(values) {
+  const fields = {}
+  const source = values.join(' ')
+  const matcher = /(?:^|\s)([A-Za-z][A-Za-z0-9_-]*)\s*=\s*("(?:\\.|[^"])*"|'(?:\\.|[^'])*'|[^\s]+)/g
+  let match
+  while ((match = matcher.exec(source))) {
+    fields[match[1].toLowerCase()] = match[2]
+  }
+  return fields
+}
+
+function formatLegacyLoonV2BodyAction(phase, action, args, condition) {
+  const bodyAction = action.match(/^(request|response)-body-(replace-regex|json-jq|jq|json-add|json-del|json-delete|json-replace)$/i)
+  if (!bodyAction || bodyAction[1].toLowerCase() !== phase) return null
+  const operation = bodyAction[2].toLowerCase()
+  const name = phase + (operation === 'replace-regex' ? '.body.replace' : '.json.' + (operation === 'json-del' || operation === 'json-delete' ? 'delete' : operation.replace(/^json-/, '')))
+
+  if (operation === 'replace-regex') {
+    if (args.length < 2) return { unsupported: action + ' 缺少正则或替换值' }
+    const regex = formatLegacyLoonV2RegexArgument(args[0])
+    const replacement = formatLegacyLoonV2StringArgument(args.slice(1).join(' '))
+    if (!regex || !replacement) return { unsupported: action + ' 的参数无法转换为 Loon v2' }
+    return { line: condition + ' then ' + name + '(' + regex + ', ' + replacement + ')' }
+  }
+
+  if (operation === 'jq' || operation === 'json-jq') {
+    if (args.length === 0) return { unsupported: action + ' 缺少 jq 表达式' }
+    const expression = formatLegacyLoonV2StringArgument(args.join(' '))
+    return expression ? { line: condition + ' then ' + name + '(' + expression + ')' } : { unsupported: action + ' 的 jq 表达式无法转换' }
+  }
+
+  if (operation === 'json-del' || operation === 'json-delete') {
+    if (args.length === 0) return { unsupported: action + ' 缺少 JSON 路径' }
+    const paths = args.map(formatLegacyLoonV2StringArgument)
+    const pathArg = paths.length === 1 ? paths[0] : formatLegacyLoonV2StringArray(args)
+    if (!pathArg || paths.some(value => !value)) return { unsupported: action + ' 的 JSON 路径无法转换' }
+    return { line: condition + ' then ' + name + '(' + pathArg + ')' }
+  }
+
+  if (args.length < 2 || args.length % 2 !== 0) return { unsupported: action + ' 必须使用成对的路径和值' }
+  const paths = []
+  const values = []
+  for (let i = 0; i < args.length; i += 2) {
+    paths.push(args[i])
+    values.push(args[i + 1])
+  }
+  const pathArg = paths.length === 1 ? formatLegacyLoonV2StringArgument(paths[0]) : formatLegacyLoonV2StringArray(paths)
+  const valueArg = values.length === 1 ? formatLegacyLoonV2JsonValue(values[0]) : formatLegacyLoonV2JsonValueArray(values)
+  if (!pathArg || !valueArg) return { unsupported: action + ' 的 JSON 参数无法转换' }
+  return { line: condition + ' then ' + name + '(' + pathArg + ', ' + valueArg + ')' }
+}
+
+function formatLegacyLoonV2HeaderActions(phase, action, args, condition) {
+  const headerAction = action.match(/^(request|response)-header-(del|add|set|replace|replace-regex)$/i)
+  if (!headerAction || headerAction[1].toLowerCase() !== phase) return null
+  const operation = headerAction[2].toLowerCase()
+  const lines = []
+  const addLine = (name, values) => {
+    const formatted = values.map(formatLegacyLoonV2StringArgument)
+    if (formatted.some(value => !value)) return false
+    lines.push(condition + ' then ' + phase + '.header.' + name + '(' + formatted.join(', ') + ')')
+    return true
+  }
+
+  if (operation === 'del') {
+    if (args.length === 0) return { unsupported: action + ' 缺少 Header 名称' }
+    for (const item of args) {
+      if (!addLine('del', [item])) return { unsupported: action + ' 的 Header 名称无法转换' }
+    }
+    return { lines }
+  }
+
+  if (operation === 'replace-regex') {
+    if (args.length < 3 || args.length % 3 !== 0) return { unsupported: action + ' 必须使用名称、正则、替换值三元组' }
+    for (let i = 0; i < args.length; i += 3) {
+      const name = formatLegacyLoonV2StringArgument(args[i])
+      const regex = formatLegacyLoonV2RegexArgument(args[i + 1])
+      const replacement = formatLegacyLoonV2StringArgument(args[i + 2])
+      if (!name || !regex || !replacement) return { unsupported: action + ' 的参数无法转换为 Loon v2' }
+      lines.push(condition + ' then ' + phase + '.header.replace(' + name + ', ' + regex + ', ' + replacement + ')')
+    }
+    return { lines }
+  }
+
+  if (operation === 'replace' && args.length >= 3 && args.length % 3 === 0) {
+    for (let i = 0; i < args.length; i += 3) {
+      const name = formatLegacyLoonV2StringArgument(args[i])
+      const regex = formatLegacyLoonV2RegexArgument(args[i + 1])
+      const replacement = formatLegacyLoonV2StringArgument(args[i + 2])
+      if (!name || !regex || !replacement) return { unsupported: action + ' 的参数无法转换为 Loon v2' }
+      lines.push(condition + ' then ' + phase + '.header.replace(' + name + ', ' + regex + ', ' + replacement + ')')
+    }
+    return { lines }
+  }
+
+  if (args.length < 2 || args.length % 2 !== 0) return { unsupported: action + ' 必须使用名称和值成对参数' }
+  for (let i = 0; i < args.length; i += 2) {
+    if (!addLine(operation === 'set' || operation === 'replace' ? 'set' : 'add', [args[i], args[i + 1]])) {
+      return { unsupported: action + ' 的参数无法转换为 Loon v2' }
+    }
+  }
+  return { lines }
+}
+
+function formatLegacyLoonV2MockAction(action, args, condition) {
+  const phase = /^mock-request-body$/i.test(action) ? 'request' : /^mock-response-body$/i.test(action) ? 'response' : ''
+  if (!phase) return null
+  const fields = parseLegacyLoonKeyValueFields(args)
+  const dataType = fields['data-type']
+  const data = fields.data
+  const dataPath = fields['data-path']
+  if (!dataType || (!data && !dataPath)) return { unsupported: action + ' 缺少 data-type 或 Body 数据' }
+  const typeArg = formatLegacyLoonV2StringArgument(dataType)
+  const sourceArg = formatLegacyLoonV2StringArgument(dataPath || data)
+  if (!typeArg || !sourceArg) return { unsupported: action + ' 的内容无法转换为 Loon v2' }
+  const isFile = !!dataPath
+  const argsOut = [typeArg, sourceArg]
+  if (phase === 'response') {
+    const status = fields['status-code'] ? stripWrapQuote(fields['status-code']) : '200'
+    if (!/^[1-5][0-9]{2}$/.test(status)) return { unsupported: action + ' 的 status-code 不是有效 HTTP 状态码' }
+    argsOut.push(status)
+  }
+  if (fields['mock-data-is-base64']) {
+    const encoded = formatLoonV2BooleanFromLegacy(fields['mock-data-is-base64'])
+    if (!encoded) return { unsupported: action + ' 的 mock-data-is-base64 不是 Boolean' }
+    argsOut.push(encoded)
+  }
+  const method = isFile ? 'mock_file' : 'mock'
+  return { line: condition.replace(/^request|^response/, phase) + ' then ' + phase + '.body.' + method + '(' + argsOut.join(', ') + ')' }
+}
+
+function formatLegacyLoonV2RewriteLine(line) {
+  const prefix = splitLegacyLoonV2Prefix(line)
+  const source = prefix.source
+  if (!source || /^(request|response)\s+if\s+/i.test(source)) return null
+  const fields = splitLegacyLoonV2Fields(source)
+  if (fields.length < 2) return null
+
+  const pattern = fields[0]
+  let action = fields[1].toLowerCase()
+  let args = fields.slice(2)
+  const trailingAction = fields[fields.length - 1]?.toLowerCase()
+  if (
+    fields.length >= 3 &&
+    /^(?:reject(?:-(?:dict|array|img|tinygif|video|200))?|302|307|header)$/i.test(trailingAction) &&
+    !/^(?:reject(?:-(?:dict|array|img|tinygif|video|200))?|302|307|header)$/i.test(action)
+  ) {
+    action = trailingAction
+    args = fields.slice(1, -1)
+  }
+  if (action === '-' && args.length > 0 && /^reject(?:-|$)/i.test(args[0])) {
+    action = args.shift().toLowerCase()
+  }
+
+  const decorate = (value, index) => (index === 0 ? prefix.mark : '') + (prefix.disabled ? '#' : '') + value
+  const lines = []
+  const regex = formatLoonV2UrlRegexFromLegacy(pattern)
+  if (!regex) return { unsupported: 'URL 条件无法转换为 Loon v2 正则' }
+  const requestCondition = 'request if ${url} ~= ' + regex
+  const responseCondition = 'response if ${url} ~= ' + regex
+
+  if (/^reject(?:-|$)/i.test(action)) {
+    const kind = action.replace(/^reject-?/i, '').toLowerCase()
+    const actionName = {
+      '': 'reject',
+      '200': 'reject',
+      dict: 'reject_dict',
+      array: 'reject_array',
+      img: 'reject_img',
+      tinygif: 'reject_img',
+      video: 'reject_video',
+    }[kind]
+    if (!actionName) return { unsupported: action + ' 没有对应的 Loon v2 Action' }
+    const body = kind === '200' ? ', " "' : ''
+    lines.push(requestCondition + ' then ' + actionName + '(200' + body + ')')
+  } else if (/^(?:302|307)$/i.test(action) || /^(?:302|307)$/i.test(args[0] || '')) {
+    const status = /^(?:302|307)$/i.test(action) ? action : args.shift()
+    const target = args.shift()
+    const targetArg = formatLegacyLoonV2StringArgument(target)
+    if (!targetArg) return { unsupported: action + ' 缺少可转换的重定向 URL' }
+    lines.push(requestCondition + ' then redirect(' + status + ', ' + targetArg + ')')
+  } else if (action === 'header') {
+    const targetArg = formatLegacyLoonV2StringArgument(args[0])
+    if (!targetArg) return { unsupported: 'header URL Rewrite 缺少可转换的目标 URL' }
+    lines.push(requestCondition + ' then url.replace(' + targetArg + ')')
+  } else if (/^mock-(?:request|response)-body$/i.test(action)) {
+    const mock = formatLegacyLoonV2MockAction(action, args, requestCondition)
+    if (mock?.unsupported) return mock
+    if (mock?.line) lines.push(mock.line)
+  } else {
+    const body = formatLegacyLoonV2BodyAction('request', action, args, requestCondition)
+    const responseBody = formatLegacyLoonV2BodyAction('response', action, args, responseCondition)
+    const responseHeader = /^response-header-/i.test(action)
+    const header = formatLegacyLoonV2HeaderActions(responseHeader ? 'response' : 'request', action, args, responseHeader ? responseCondition : requestCondition)
+    const converted = body || responseBody || header
+    if (!converted) return null
+    if (converted.unsupported) return converted
+    if (converted.line) lines.push(converted.line)
+    if (converted.lines) lines.push(...converted.lines)
+  }
+
+  return { lines: lines.map(decorate) }
+}
+
+function upgradeLegacyLoonV2RewriteLines(lines) {
+  const output = []
+  for (const line of lines) {
+    const converted = formatLegacyLoonV2RewriteLine(line)
+    if (!converted) {
+      output.push(line)
+      continue
+    }
+    if (converted.unsupported) {
+      loonV2Warnings.push(line + ' → ' + converted.unsupported + '，已保留旧语法')
+      output.push(line)
+      continue
+    }
+    output.push(...converted.lines)
+  }
+  return output
+}
+
+function selectLoonV2EditValue(targets, values, name, line, fallback) {
+  if (!targets || !values) return { matched: false, value: fallback }
+  for (let i = 0; i < targets.length; i++) {
+    const target = `${targets[i] ?? ''}`.trim()
+    if (target && (name.includes(target) || line.includes(target))) {
+      return { matched: true, value: values[i] ?? '' }
+    }
+  }
+  return { matched: false, value: fallback }
+}
+
+function applyLoonV2ScriptEdits(line) {
+  const source = `${line ?? ''}`.trim()
+  const editRequested =
+    njsnametarget ||
+    timeoutt ||
+    nArgTarget ||
+    nCron ||
+    enginet
+  if (!editRequested) return line
+
+  const actionMatch = /\bthen\s+script\s*\(/i.exec(source)
+  if (!actionMatch) return line
+  const openIndex = source.indexOf('(', actionMatch.index)
+  const closeIndex = findLoonV2ClosingParen(source, openIndex)
+  if (closeIndex === -1) return line
+  const actionParts = splitLoonV2TopLevel(source.slice(openIndex + 1, closeIndex))
+  if (actionParts.length > 2 || !actionParts[0]) return line
+
+  const path = unwrapLoonV2String(actionParts[0])
+  if (path == null) return line
+  const tail = source.slice(closeIndex + 1).trim()
+  if (tail && !/^with\b/i.test(tail)) return line
+  const parsed = parseLoonV2Options(tail ? tail.replace(/^with\s+/i, '') : '')
+  if (parsed.reason) return line
+  const options = parsed.options.map(item => ({ ...item }))
+  const currentTag = options.find(item => item.key === 'tag')?.value
+  const name = unwrapLoonV2String(currentTag || '') || path.substring(path.lastIndexOf('/') + 1).replace(/\.[^.]+$/, '')
+  const originalArgument = actionParts.length === 2 ? actionParts[1] : ''
+  const originalTrigger = source.slice(0, actionMatch.index).trim()
+  let updated = false
+
+  const updateOption = (key, value) => {
+    const index = options.findIndex(item => item.key === key)
+    if (index >= 0) options[index].value = value
+    else options.push({ key, value })
+    updated = true
+  }
+
+  const nameEdit = selectLoonV2EditValue(njsnametarget, njsname, name, source, name)
+  if (nameEdit.matched && nameEdit.value !== name) {
+    const tag = formatLoonV2FixedString(nameEdit.value)
+    if (tag) updateOption('tag', tag)
+  }
+
+  const timeoutEdit = selectLoonV2EditValue(timeoutt, timeoutv, name, source, null)
+  if (timeoutEdit.matched) {
+    const timeoutValue = formatLoonV2TimeoutFromLegacy(timeoutEdit.value)
+    if (timeoutValue) updateOption('timeout', timeoutValue)
+    else loonV2Warnings.push(`${source} → timeout 修改值不是有效的 Loon v2 正数，已保留原值`)
+  }
+
+  const argumentEdit = selectLoonV2EditValue(nArgTarget, nArg, name, source, null)
+  let argument = originalArgument
+  if (argumentEdit.matched) {
+    const nextArgument = formatLoonV2ArgumentFromLegacy(argumentEdit.value)
+    argument = nextArgument ? nextArgument : ''
+    updated = true
+  }
+
+  let trigger = originalTrigger
+  const type = source.match(/^(request|response|cron|network-changed|generic)\b/i)?.[1]?.toLowerCase()
+  if (type === 'cron') {
+    const cronMatch = originalTrigger.match(/^cron\s+([\s\S]+)$/i)
+    const cronEdit = selectLoonV2EditValue(nCron, ncronexp, name, source, null)
+    if (cronMatch && cronEdit.matched) {
+      const nextCron = formatLoonV2TemplateFromLegacy(cronEdit.value) || stripWrapQuote(`${cronEdit.value}`.trim())
+      if (nextCron) {
+        trigger = /^\$\{[^{}]+\}$/.test(nextCron) ? `cron ${nextCron}` : `cron ${JSON.stringify(nextCron)}`
+        updated = true
+      }
+    }
+  }
+
+  if (enginet) {
+    const engineEdit = selectLoonV2EditValue(enginet, enginev, name, source, null)
+    if (engineEdit.matched) loonV2Warnings.push(`${source} → Loon v2 没有 engine 参数，未应用该修改`)
+  }
+
+  if (!updated) return line
+  const action = `script(${JSON.stringify(path)}${argument ? `, ${argument}` : ''})`
+  return `${trigger} then ${action}${options.length > 0 ? ` with ${options.map(item => `${item.key}=${item.value}`).join(', ')}` : ''}`
 }
 
 function getSurgeRuleTogglePrefix(value) {
@@ -3909,7 +4831,7 @@ function getPolicy(str) {
   }
 }
 
-function parseArguments(str) {
+function parseArguments(str, noteK = '') {
   if (/#!arguments/.test(str)) {
     const queryString = str.split(/#!arguments\s*=\s*/)[1] //获取查询字符串部分
     const items = splitTopLevel(queryString, ',')
@@ -3922,7 +4844,7 @@ function parseArguments(str) {
       const type = /^(true|false)$/i.test(stripWrapQuote(value)) ? 'switch' : 'input'
       const tag = `tag=${key}, desc=${key}`
 
-      sgArg.push({ key, value, type, tag }) //将键值对添加到对象中
+      sgArg.push({ key, value, type, tag, noteK }) //将键值对添加到对象中
 
       if (stripWrapQuote(value) == 'hostname') {
         hn2 = true
@@ -3944,7 +4866,7 @@ function parseArguments(str) {
     const options = normalizeArgumentOptions(valueParts)
     const tag = tagParts.join(', ') || `tag=${key}, desc=${key}`
 
-    sgArg.push({ key, value, type, options, tag })
+    sgArg.push({ key, value, type, options, tag, noteK })
 
     if (stripWrapQuote(value) == 'hostname') {
       hn2 = true
@@ -4495,9 +5417,28 @@ function generateRule(node, platform, flags = {}) {
     AND: 2,
     OR: 1,
   }
-  let hasPreMatching
-  function traverseTree(node, platform, parentOperator = null) {
-    node.flags = { ...node.flags, ...flags }
+  function collectRuleOperators(children) {
+    const operators = []
+    flattenChildren(children).forEach(child => {
+      if (!child?.operator) return
+      operators.push(child.operator)
+      if (child.type === 'LOGICAL') {
+        operators.push(...collectRuleOperators(child.children))
+      }
+    })
+    return operators
+  }
+
+  function inheritedValueFlags(node, inheritedFlags) {
+    if (node.type !== 'VALUE') return {}
+    return Object.fromEntries(
+      Object.entries(inheritedFlags).filter(
+        ([flag, isSet]) => isSet && flag !== 'preMatching' && FLAG_SUPPORTED_TYPES[flag]?.includes(node.operator)
+      )
+    )
+  }
+
+  function traverseTree(node, platform, parentOperator = null, root = false, inheritedFlags = {}) {
     const features = platformFeatures[platform]
     if (!features) {
       throw new Error(`未知的平台：${platform}`)
@@ -4508,15 +5449,17 @@ function generateRule(node, platform, flags = {}) {
       return ''
     }
 
+    const nodeFlags = {
+      ...(node.flags || {}),
+      ...(root ? flags : inheritedValueFlags(node, inheritedFlags)),
+    }
+
     if (node.type === 'LOGICAL') {
       const operator = node.operator
       const arity = LOGICAL_OPERATORS_ARITY[operator]
+      let hasPreMatching = Boolean(node.routingPolicy && nodeFlags.preMatching)
 
       // 检查是否有 pre-matching 标志
-      // const hasPreMatching = node.flags && node.flags.preMatching;
-      if (node.routingPolicy) {
-        hasPreMatching = node.flags && node.flags.preMatching
-      }
       if (hasPreMatching && node.routingPolicy) {
         // 验证 routingPolicy 是否符合 ^REJECT(-[A-Z]+)*$ 的格式
         if (!features.rejectPolicyRegex.test(node.routingPolicy)) {
@@ -4527,18 +5470,10 @@ function generateRule(node, platform, flags = {}) {
 
       if (hasPreMatching) {
         // 检查所有子规则是否属于支持 pre-matching 的类型
-        const notSupportedTypes = []
-        const allChildrenSupported = node.children.every(childArray => {
-          return Array.isArray(childArray)
-            ? childArray.every(child => {
-                const isSupported = FLAG_SUPPORTED_TYPES.preMatching.includes(child.operator)
-                if (!isSupported) {
-                  notSupportedTypes.push(child.operator)
-                }
-                return isSupported
-              })
-            : true
-        })
+        const notSupportedTypes = collectRuleOperators(node.children).filter(
+          operatorName => !FLAG_SUPPORTED_TYPES.preMatching.includes(operatorName)
+        )
+        const allChildrenSupported = notSupportedTypes.length === 0
 
         if (!allChildrenSupported) {
           console.log(
@@ -4553,7 +5488,7 @@ function generateRule(node, platform, flags = {}) {
       let childrenOutputs = []
       node.children.forEach(child => {
         flattenChildren(child).forEach(subChild => {
-          const output = traverseTree(subChild, platform, operator)
+          const output = traverseTree(subChild, platform, operator, false, inheritedFlags)
           if (output !== '') {
             childrenOutputs.push(output)
           }
@@ -4568,8 +5503,8 @@ function generateRule(node, platform, flags = {}) {
           throw new Error(`操作符 ${operator} 期望有 1 个子节点，但得到 ${childrenOutputs.length} 个`)
         }
         // 仅允许添加 pre-matching 标志
-        if (node.flags) {
-          const { extendedMatching, noResolve, preMatching, src } = node.flags
+        if (nodeFlags) {
+          const { extendedMatching, noResolve, preMatching, src } = nodeFlags
           if (extendedMatching || noResolve || src) {
             console.log(`操作符 ${operator} 不能添加 extended-matching、no-resolve 或 src 标志`)
           }
@@ -4604,12 +5539,16 @@ function generateRule(node, platform, flags = {}) {
       }
       let result = `${node.operator},${node.value}`
 
-      if (node.flags) {
+      if (nodeFlags) {
         let flagStrings = []
 
-        for (const [flag, isSet] of Object.entries(node.flags)) {
+        for (const [flag, isSet] of Object.entries(nodeFlags)) {
           if (isSet) {
             const supportedTypes = FLAG_SUPPORTED_TYPES[flag]
+            if (!supportedTypes) {
+              console.log(`未知的标志类型：${flag}`)
+              continue
+            }
             if (!supportedTypes.includes(node.operator)) {
               console.log(`标志 ${flag} 不支持应用于规则类型 ${node.operator}`)
             } else {
@@ -4685,7 +5624,7 @@ function generateRule(node, platform, flags = {}) {
     }
     return result
   }
-  return traverseTree(node, platform)
+  return traverseTree(node, platform, null, true, flags)
 }
 
 function modifyRule(input, platform, flags) {

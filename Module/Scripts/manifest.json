@@ -17,11 +17,11 @@
   },
   "https://raw.githubusercontent.com/Script-Hub-Org/Script-Hub/main/Rewrite-Parser.beta.js": {
     "file": "1a270e11c684f5288821d32690ca285ea5fd4e95a1291d940fad341c991a8e77.js",
-    "sha256": "588f98196249635787200b13e5f37080d72612590221ebedc15134cafbd49998"
+    "sha256": "771d34258db486a4f3f2047263e7062b33b8f8814c898406b084ab80d34abd16"
   },
   "https://raw.githubusercontent.com/Script-Hub-Org/Script-Hub/main/rule-parser.beta.js": {
     "file": "618342e21e814b712b18528990ca2ec91d722d101876dd88c86430471fd52607.js",
-    "sha256": "6d30380cc68e112b5bcb5d9b2013d553d3c48612b1c61e78f0e0bfae3e48ca2c"
+    "sha256": "1c9d5a4c02afb3eb0ed0c4c97b5cfdf0bbbd8067ebc1800fbb1514270d25f4ab"
   },
   "https://raw.githubusercontent.com/Script-Hub-Org/Script-Hub/main/script-converter.beta.js": {
     "file": "16fd3c262aff1dcc505ba01a6850854286d0ef53480542ddf971041aa5a45ee9.js",
@@ -29,7 +29,7 @@
   },
   "https://raw.githubusercontent.com/Script-Hub-Org/Script-Hub/main/script-hub.beta.js": {
     "file": "bb6707990055d08a648069d4b67891f8d723cdbd337de20f2d4c261390a96a54.js",
-    "sha256": "6a0c1d8e05136e7f134bfbf0dd94a8ab7356b22607a1ba7bace57820e2bc7af1"
+    "sha256": "c36798a22f65cb6b51e2e57631652591e19e50e8cb1bac3d87893d78c9e98dee"
   },
   "https://raw.githubusercontent.com/Yu9191/Rewrite/main/huangdouduanju/dist/huangdou.js": {
     "file": "6baf28b1ce69a9356b0871acfdabf3e3929224d15986bac2c03d5f92d0c41d83.js",
