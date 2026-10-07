@@ -35,4 +35,16 @@
 
 [历史 HTTPDNS 抓包报告](https://github.com/VirgilClyne/GetSomeFries/issues/76) 列出 7 个硬编码 IP 和不具体的 `*.zijieapi.com`。该报告来自 2024-12，缺少用户当前版本请求及归属确认，保留为待实机核对项，不将其写入正式规则。`extended-matching` 可以匹配直接连 IP 时可见的 TLS SNI/HTTP Host，但无法识别没有域名信息的裸 IP 连接。
 
-目前验证覆盖第一方公开生产代码和固定上游专用规则，不等于已经验证用户设备全部功能。验收实机完整性需观察当前版本的启动、搜索、商品详情、图片/视频加载、聊天和消息图片、发布上传、登录、支付、号码认证、定位及音视频请求；发现新端点时先确认用途与共享边界再补充。
+目前验证覆盖第一方公开生产代码、固定上游专用规则和下述实机应用隐私报告，不等于已经验证用户设备全部功能或实际策略命中。验收实机完整性需观察当前版本的启动、搜索、商品详情、图片/视频加载、聊天和消息图片、发布上传、登录、支付、号码认证、定位及音视频请求；发现新端点时先确认用途与共享边界再补充。
+
+## 2026-10-07 实机补充
+
+用户提供 `ScreenRecording_10-07-2026 19-56-15_1.mp4`。录屏在 iPhone 应用隐私报告的闲鱼详情页显示由该 App 直接联系的域名，并依次展示具名域名和 Unnamed Domains。具名部分可辨认 27 个域名，原规则覆盖 6 个，新增以下 21 个精确端点后全部覆盖。这证明域名曾被闲鱼访问，不证明每个端点的具体用途，也不证明安装规则后的实际策略命中。
+
+新增端点为 `tls-goofish.dingtalk.com`、`umc.danuoyi.alicdn.com`、`vpp-license-proxy.aliyuncs.com`、`alivc-aio.cn-hangzhou.dualstack.log.aliyuncs.com`、`cloud-config-service.rtc.aliyuncs.com`、`ali.wosms.cn`、`slsrole.alicdn.com`、`videocloud.cn-hangzhou.dualstack.log.aliyuncs.com`、`vod-newplayer.cn-hangzhou.log.aliyuncs.com`、`vod.cn-shanghai.aliyuncs.com`、`livephoto.cloudvideocdn.taobao.com`、`dinamicx.alibabausercontent.com`、`gw.alipayobjects.com`、`ntp.ynuf.aliapp.org`、`tbexpand.alicdn.com`、`abtest.alibaba.com`、`cloud.video.taobao.com`、`mgwapi-tb.alipay.com`、`orange-dc.m.taobao.com`、`video-sdk-cert-cdn.aliyuncs.com`、`zconfig.alibabausercontent.com`。`dinamicx` 按录屏原文保留，不能改写为 `dynamic` 或 `dynamicx`。
+
+原有规则覆盖的 6 个域名为 `gw.alicdn.com`、`msgacs.m.taobao.com`、`video.goofish.com`、`g.alicdn.com`、`img.alicdn.com`、`mobilegw.alipay.com`。其中 `video.goofish.com` 被 `goofish.com` 后缀覆盖，不添加冗余精确规则。
+
+这 21 个端点在更新脚本的 `OBSERVED_HOSTS` 中保留，作为直接设备证据独立于通用上游分类，不因通用来源缺少分类而删除。全部采用 `DOMAIN`，不扩大为 Alibaba、阿里云或 CDN 父域。普通上游依赖的交叉核对要求保持不变。
+
+录屏后半段的 IP 未加入。仅凭该报告不能确定每个地址对应的主机名、当前用途、是否为 Surge 映射地址或共享服务器；需结合 Surge 请求详情中的主机名/SNI、目标地址及实际命中规则判断。不能把其中的 DNS 地址、映射 IP、共享 CDN 地址或 `2000::` 等异常宽泛显示直接转成闲鱼 IP 段。

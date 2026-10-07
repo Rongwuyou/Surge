@@ -38,6 +38,22 @@ DEPENDENCY_HOSTS = {
     "wss.im.dingtalk.cn", "mobilegw.alipay.com", "render.alipay.com",
     "gm.mmstat.com", "log.mmstat.com", "s-gm.mmstat.com",
 }
+# App Privacy Report recorded on the user's iPhone on 2026-10-07 at 19:56.
+# These exact hosts have direct device evidence and need no broad upstream membership.
+# Keep the observed spelling "dinamicx", not "dynamic" or "dynamicx".
+OBSERVED_HOSTS = {
+    "tls-goofish.dingtalk.com", "umc.danuoyi.alicdn.com",
+    "vpp-license-proxy.aliyuncs.com",
+    "alivc-aio.cn-hangzhou.dualstack.log.aliyuncs.com",
+    "cloud-config-service.rtc.aliyuncs.com", "ali.wosms.cn",
+    "slsrole.alicdn.com", "videocloud.cn-hangzhou.dualstack.log.aliyuncs.com",
+    "vod-newplayer.cn-hangzhou.log.aliyuncs.com", "vod.cn-shanghai.aliyuncs.com",
+    "livephoto.cloudvideocdn.taobao.com", "dinamicx.alibabausercontent.com",
+    "gw.alipayobjects.com", "ntp.ynuf.aliapp.org", "tbexpand.alicdn.com",
+    "abtest.alibaba.com", "cloud.video.taobao.com", "mgwapi-tb.alipay.com",
+    "orange-dc.m.taobao.com", "video-sdk-cert-cdn.aliyuncs.com",
+    "zconfig.alibabausercontent.com",
+}
 MIN_SOURCE_RULES = {"bm7": 10, "rabbit": 3500, "loyal": 10000, "yuu": 100}
 FORBIDDEN_SUFFIXES = {
     "taobao.com", "alicdn.com", "dingtalk.com", "dingtalk.cn",
@@ -80,7 +96,7 @@ def build(sources: dict[str, set[tuple[str, str]]], previous: set[tuple[str, str
         if votes < 2:
             raise RuntimeError(f"dependency lost cross-source corroboration: {host} ({votes}/3)")
     rules = compact_rules(previous | baseline | {("DOMAIN-SUFFIX", "goofish.com")} |
-                          {("DOMAIN", host) for host in DEPENDENCY_HOSTS})
+                          {("DOMAIN", host) for host in DEPENDENCY_HOSTS | OBSERVED_HOSTS})
     if any(kind not in {"DOMAIN", "DOMAIN-SUFFIX"} for kind, _ in rules):
         raise RuntimeError("unexpected non-domain rule in XianYu")
     if any("." not in value for _, value in rules):
@@ -96,7 +112,8 @@ def render(rules: set[tuple[str, str]]) -> str:
     header = ["# NAME: XianYu", "# AUTHOR: cbzy-3p", "# FORMAT: Surge Rule Set",
               "# UPDATED: " + datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")]
     header.extend(f"# SOURCE: {name}: {url}" for name, url in SOURCES.items())
-    header += ["# EVIDENCE: Rule/XianYu-Sources.md; first-party web assets and SDK disclosure",
+    header += ["# SOURCE: User iPhone App Privacy Report; screen recording 2026-10-07 19:56 (UTC+8)",
+               "# EVIDENCE: Rule/XianYu-Sources.md; first-party assets, SDK disclosure, and observed app hosts",
                "# NOTE: Shared dependency hosts also match other apps using the same hosts.",
                "# NOTE: No whole Alibaba cloud/CDN networks, third-party SDK umbrellas, or unverified IPs."]
     for kind in ("DOMAIN", "DOMAIN-SUFFIX"):
@@ -120,7 +137,8 @@ def main() -> None:
     validate_text(TARGET, output)
     # Broad parent list churn is irrelevant: record only the selected classification/coverage.
     snapshot = json.dumps({"version": 1, "counts": {"bm7": len(sources["bm7"]),
-        "reviewed_dependencies": len(DEPENDENCY_HOSTS), "output": len(rules)}}, indent=2, sort_keys=True) + "\n"
+        "reviewed_dependencies": len(DEPENDENCY_HOSTS), "observed_app_hosts": len(OBSERVED_HOSTS),
+        "output": len(rules)}}, indent=2, sort_keys=True) + "\n"
     if current.splitlines()[:3] + current.splitlines()[4:] != output.splitlines()[:3] + output.splitlines()[4:]:
         TARGET.write_text(output, encoding="utf-8")
     if not SNAPSHOT.exists() or SNAPSHOT.read_text() != snapshot:

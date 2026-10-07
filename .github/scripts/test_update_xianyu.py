@@ -30,6 +30,20 @@ class XianYuTests(unittest.TestCase):
                      "unrelated.alicdn.com", "unrelated.taobao.com", "evilgoofish.com"):
             self.assertFalse(updater.covered(host, rules), host)
 
+    def test_device_evidence_survives_absence_from_broad_parent_sources(self):
+        sources = self.sources()
+        for name in ("rabbit", "loyal", "yuu"):
+            self.assertFalse(updater.covered("ali.wosms.cn", sources[name]))
+        rules = self.build(sources)
+        for host in ("ali.wosms.cn", "tls-goofish.dingtalk.com", "vpp-license-proxy.aliyuncs.com",
+                     "cloud-config-service.rtc.aliyuncs.com", "ntp.ynuf.aliapp.org",
+                     "dinamicx.alibabausercontent.com", "gw.alipayobjects.com"):
+            self.assertIn(("DOMAIN", host), rules)
+        for host in ("other.wosms.cn", "other.alibabausercontent.com",
+                     "other.alipayobjects.com", "other.rtc.aliyuncs.com",
+                     "dynamicx.alibabausercontent.com", "dynamic.alibabausercontent.com"):
+            self.assertFalse(updater.covered(host, rules), host)
+
     def test_domain_set_tlds_and_exact_hosts_keep_semantics(self):
         self.assertEqual(updater.parse_source("loyal", ".alibaba\n.goofish.com\nlogin.example.com\n"),
                          {("DOMAIN-SUFFIX", "alibaba"), ("DOMAIN-SUFFIX", "goofish.com"),

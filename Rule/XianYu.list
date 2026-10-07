@@ -1,24 +1,31 @@
 # NAME: XianYu
 # AUTHOR: cbzy-3p
 # FORMAT: Surge Rule Set
-# UPDATED: 2026-10-07 11:52:32 UTC
+# UPDATED: 2026-10-07 12:06:51 UTC
 # SOURCE: bm7: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/XianYu/XianYu.list
 # SOURCE: rabbit: https://raw.githubusercontent.com/Rabbit-Spec/Surge/Master/Rules/China.list
 # SOURCE: loyal: https://raw.githubusercontent.com/Loyalsoldier/surge-rules/release/direct.txt
 # SOURCE: yuu: https://raw.githubusercontent.com/Yuu518/Yuu-rules/rule-set/surge/geosite/alibaba.list
-# EVIDENCE: Rule/XianYu-Sources.md; first-party web assets and SDK disclosure
+# SOURCE: User iPhone App Privacy Report; screen recording 2026-10-07 19:56 (UTC+8)
+# EVIDENCE: Rule/XianYu-Sources.md; first-party assets, SDK disclosure, and observed app hosts
 # NOTE: Shared dependency hosts also match other apps using the same hosts.
 # NOTE: No whole Alibaba cloud/CDN networks, third-party SDK umbrellas, or unverified IPs.
-# DOMAIN: 40
+# DOMAIN: 61
 # DOMAIN-SUFFIX: 17
-# TOTAL: 57
+# TOTAL: 78
 
 DOMAIN,2.taobao.com
 DOMAIN,a.tbcdn.cn
+DOMAIN,abtest.alibaba.com
 DOMAIN,acs.m.taobao.com
+DOMAIN,ali.wosms.cn
+DOMAIN,alivc-aio.cn-hangzhou.dualstack.log.aliyuncs.com
 DOMAIN,amdc.m.taobao.com
 DOMAIN,assets.alicdn.com
 DOMAIN,cbu01.alicdn.com
+DOMAIN,cloud-config-service.rtc.aliyuncs.com
+DOMAIN,cloud.video.taobao.com
+DOMAIN,dinamicx.alibabausercontent.com
 DOMAIN,down-cdn.dingtalk.com
 DOMAIN,down.dingtalk.com
 DOMAIN,down.im.dingtalk.cn
@@ -26,6 +33,7 @@ DOMAIN,fli.alicdn.com
 DOMAIN,g.alicdn.com
 DOMAIN,gm.mmstat.com
 DOMAIN,gw.alicdn.com
+DOMAIN,gw.alipayobjects.com
 DOMAIN,h5.m.taobao.com
 DOMAIN,h5api.m.taobao.com
 DOMAIN,heic.alicdn.com
@@ -33,26 +41,40 @@ DOMAIN,i01.lw.aliimg.com
 DOMAIN,ilce.alicdn.com
 DOMAIN,img.alicdn.com
 DOMAIN,impaas-static.dingtalk.com
+DOMAIN,livephoto.cloudvideocdn.taobao.com
 DOMAIN,log.mmstat.com
 DOMAIN,login.m.taobao.com
 DOMAIN,login.taobao.com
 DOMAIN,market.m.taobao.com
+DOMAIN,mgwapi-tb.alipay.com
 DOMAIN,mobilegw.alipay.com
 DOMAIN,msgacs.m.taobao.com
+DOMAIN,ntp.ynuf.aliapp.org
 DOMAIN,o.alicdn.com
+DOMAIN,orange-dc.m.taobao.com
 DOMAIN,ossimg.alicdn.com
 DOMAIN,passport.taobao.com
 DOMAIN,render.alipay.com
 DOMAIN,s-gm.mmstat.com
+DOMAIN,slsrole.alicdn.com
 DOMAIN,static.dingtalk.com
+DOMAIN,tbexpand.alicdn.com
 DOMAIN,terms.alicdn.com
+DOMAIN,tls-goofish.dingtalk.com
 DOMAIN,trade-acs.m.taobao.com
+DOMAIN,umc.danuoyi.alicdn.com
+DOMAIN,video-sdk-cert-cdn.aliyuncs.com
+DOMAIN,videocloud.cn-hangzhou.dualstack.log.aliyuncs.com
+DOMAIN,vod-newplayer.cn-hangzhou.log.aliyuncs.com
+DOMAIN,vod.cn-shanghai.aliyuncs.com
+DOMAIN,vpp-license-proxy.aliyuncs.com
 DOMAIN,wss-cntaobao.dingtalk.com
 DOMAIN,wss-goofish.dingtalk.com
 DOMAIN,wss.im.dingtalk.cn
 DOMAIN,wwc.alicdn.com
 DOMAIN,wwc.taobaocdn.com
 DOMAIN,xianyu-video.alicdn.com
+DOMAIN,zconfig.alibabausercontent.com
 DOMAIN-SUFFIX,ewqcxz.com
 DOMAIN-SUFFIX,goofish.com
 DOMAIN-SUFFIX,hjkhjkl.com

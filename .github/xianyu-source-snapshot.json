@@ -1,7 +1,8 @@
 {
   "counts": {
     "bm7": 16,
-    "output": 57,
+    "observed_app_hosts": 21,
+    "output": 78,
     "reviewed_dependencies": 40
   },
   "version": 1

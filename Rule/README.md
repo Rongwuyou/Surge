@@ -14,7 +14,7 @@
 
 `Proxy.list` 使用 blackmatrix7、Rabbit-Spec、ConnersHua、Loyalsoldier 和 Yuu518 的明确代理服务分类，不以宽泛的全局规则替代。
 
-`XianYu.list` 是闲鱼专用规则，保留 blackmatrix7 的专用基线，并用 Rabbit-Spec、Loyalsoldier、Yuu518 交叉核对官网、登录、图片视频和聊天依赖。共享依赖使用精确端点，不导入整个 Alibaba、阿里云 IP 段或共享 CDN 后缀。已接入统一每日更新，来源失败或覆盖确认异常时保留上一份有效规则。来源证据、共享边界和待实机核对项见 [XianYu-Sources.md](XianYu-Sources.md)。需要单独分流时放在 China、Alibaba、淘宝及兜底规则之前；下例使用直连，也可以将 `DIRECT` 改为自己的策略名。
+`XianYu.list` 是闲鱼专用规则，保留 blackmatrix7 的专用基线，并用 Rabbit-Spec、Loyalsoldier、Yuu518 交叉核对官网、登录、图片视频和聊天依赖，同时保留用户 iPhone 应用隐私报告中确认的精确端点。共享依赖使用精确端点，不导入整个 Alibaba、阿里云 IP 段或共享 CDN 后缀。已接入统一每日更新，来源失败或覆盖确认异常时保留上一份有效规则。来源证据、共享边界和待实机核对项见 [XianYu-Sources.md](XianYu-Sources.md)。需要单独分流时放在 China、Alibaba、淘宝及兜底规则之前；下例使用直连，也可以将 `DIRECT` 改为自己的策略名。
 
 ```ini
 RULE-SET,https://raw.githubusercontent.com/cbzy-3p/Surge/main/Rule/XianYu.list,DIRECT,extended-matching,no-resolve
