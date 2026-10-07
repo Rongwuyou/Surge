@@ -46,6 +46,7 @@ jobs:
           python .github/scripts/test_update_rules.py
           python .github/scripts/test_update_xiaohongshu.py
           python .github/scripts/test_update_douyin.py
+          python .github/scripts/test_update_xianyu.py
           python .github/scripts/test_update_proxy.py
           python .github/scripts/test_update_apple.py
           python .github/scripts/test_update_icloud.py
@@ -109,6 +110,7 @@ jobs:
           python .github/scripts/test_update_rules.py
           python .github/scripts/test_update_xiaohongshu.py
           python .github/scripts/test_update_douyin.py
+          python .github/scripts/test_update_xianyu.py
           python .github/scripts/test_update_proxy.py
           python .github/scripts/test_update_apple.py
           python .github/scripts/test_update_icloud.py
@@ -131,6 +133,7 @@ jobs:
           python .github/scripts/update_wechat.py
           python .github/scripts/update_xiaohongshu.py
           python .github/scripts/update_douyin.py
+          python .github/scripts/update_xianyu.py
           python .github/scripts/update_proxy.py
           python .github/scripts/update_apple.py
           python .github/scripts/update_icloud.py

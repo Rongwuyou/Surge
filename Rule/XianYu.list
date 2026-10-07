@@ -1,0 +1,72 @@
+# NAME: XianYu
+# AUTHOR: cbzy-3p
+# FORMAT: Surge Rule Set
+# UPDATED: 2026-10-07 11:52:32 UTC
+# SOURCE: bm7: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/XianYu/XianYu.list
+# SOURCE: rabbit: https://raw.githubusercontent.com/Rabbit-Spec/Surge/Master/Rules/China.list
+# SOURCE: loyal: https://raw.githubusercontent.com/Loyalsoldier/surge-rules/release/direct.txt
+# SOURCE: yuu: https://raw.githubusercontent.com/Yuu518/Yuu-rules/rule-set/surge/geosite/alibaba.list
+# EVIDENCE: Rule/XianYu-Sources.md; first-party web assets and SDK disclosure
+# NOTE: Shared dependency hosts also match other apps using the same hosts.
+# NOTE: No whole Alibaba cloud/CDN networks, third-party SDK umbrellas, or unverified IPs.
+# DOMAIN: 40
+# DOMAIN-SUFFIX: 17
+# TOTAL: 57
+
+DOMAIN,2.taobao.com
+DOMAIN,a.tbcdn.cn
+DOMAIN,acs.m.taobao.com
+DOMAIN,amdc.m.taobao.com
+DOMAIN,assets.alicdn.com
+DOMAIN,cbu01.alicdn.com
+DOMAIN,down-cdn.dingtalk.com
+DOMAIN,down.dingtalk.com
+DOMAIN,down.im.dingtalk.cn
+DOMAIN,fli.alicdn.com
+DOMAIN,g.alicdn.com
+DOMAIN,gm.mmstat.com
+DOMAIN,gw.alicdn.com
+DOMAIN,h5.m.taobao.com
+DOMAIN,h5api.m.taobao.com
+DOMAIN,heic.alicdn.com
+DOMAIN,i01.lw.aliimg.com
+DOMAIN,ilce.alicdn.com
+DOMAIN,img.alicdn.com
+DOMAIN,impaas-static.dingtalk.com
+DOMAIN,log.mmstat.com
+DOMAIN,login.m.taobao.com
+DOMAIN,login.taobao.com
+DOMAIN,market.m.taobao.com
+DOMAIN,mobilegw.alipay.com
+DOMAIN,msgacs.m.taobao.com
+DOMAIN,o.alicdn.com
+DOMAIN,ossimg.alicdn.com
+DOMAIN,passport.taobao.com
+DOMAIN,render.alipay.com
+DOMAIN,s-gm.mmstat.com
+DOMAIN,static.dingtalk.com
+DOMAIN,terms.alicdn.com
+DOMAIN,trade-acs.m.taobao.com
+DOMAIN,wss-cntaobao.dingtalk.com
+DOMAIN,wss-goofish.dingtalk.com
+DOMAIN,wss.im.dingtalk.cn
+DOMAIN,wwc.alicdn.com
+DOMAIN,wwc.taobaocdn.com
+DOMAIN,xianyu-video.alicdn.com
+DOMAIN-SUFFIX,ewqcxz.com
+DOMAIN-SUFFIX,goofish.com
+DOMAIN-SUFFIX,hjkhjkl.com
+DOMAIN-SUFFIX,iopiopl.com
+DOMAIN-SUFFIX,lkjujm.com
+DOMAIN-SUFFIX,mnbvdfg.com
+DOMAIN-SUFFIX,nfmrtfv.com
+DOMAIN-SUFFIX,poiuytw.com
+DOMAIN-SUFFIX,qazasd.com
+DOMAIN-SUFFIX,redfcv.com
+DOMAIN-SUFFIX,svfrrg.com
+DOMAIN-SUFFIX,tfgvb.com
+DOMAIN-SUFFIX,uyhjnm.com
+DOMAIN-SUFFIX,vbmnmy.com
+DOMAIN-SUFFIX,wsxsdf.com
+DOMAIN-SUFFIX,xcbbtf.com
+DOMAIN-SUFFIX,xianyu.mobi

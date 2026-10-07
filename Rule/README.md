@@ -14,6 +14,12 @@
 
 `Proxy.list` 使用 blackmatrix7、Rabbit-Spec、ConnersHua、Loyalsoldier 和 Yuu518 的明确代理服务分类，不以宽泛的全局规则替代。
 
+`XianYu.list` 是闲鱼专用规则，保留 blackmatrix7 的专用基线，并用 Rabbit-Spec、Loyalsoldier、Yuu518 交叉核对官网、登录、图片视频和聊天依赖。共享依赖使用精确端点，不导入整个 Alibaba、阿里云 IP 段或共享 CDN 后缀。已接入统一每日更新，来源失败或覆盖确认异常时保留上一份有效规则。来源证据、共享边界和待实机核对项见 [XianYu-Sources.md](XianYu-Sources.md)。需要单独分流时放在 China、Alibaba、淘宝及兜底规则之前；下例使用直连，也可以将 `DIRECT` 改为自己的策略名。
+
+```ini
+RULE-SET,https://raw.githubusercontent.com/cbzy-3p/Surge/main/Rule/XianYu.list,DIRECT,extended-matching,no-resolve
+```
+
 `Apple.list` 是完整 Apple 服务总集，使用 SukkaW、blackmatrix7、Rabbit-Spec、ConnersHua、Loyalsoldier 和 Yuu518 合并生成。`iCloud.list` 是独立的 iCloud 专项规则，按同一来源顺序汇总；从 Apple 总集中只提取包含 iCloud、CloudKit 或 me.com 标识的条目，并合入 SukkaW 的 Private Relay 端点。blackmatrix7 的专用 iCloud 集合保留其标注的依赖域名，其他来源的 Apple 通用域名不会混入 iCloud 集合。两份规则可分别使用；若都订阅，需要把 iCloud 规则放在 Apple 总集之前，避免 Apple 总集先匹配。
 
 `AIGC.list`、`GlobalMedia.list` 和 `ChinaCIDR.list` 在分类相符时优先使用 SukkaW，再按分类补充 blackmatrix7、Rabbit-Spec、ConnersHua 和 Yuu518。YouTube、Netflix、ChinaMedia、China 等更细分类不使用 SukkaW 的宽泛集合硬凑，改由 blackmatrix7 建立分类边界，其他固定来源补充。China 以域名为主，ChinaCIDR 专门合并并压缩中国 IPv4、IPv6 网段。
