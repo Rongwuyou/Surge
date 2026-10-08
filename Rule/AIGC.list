@@ -1,8 +1,8 @@
 # NAME: Multi-source-AIGC
 # AUTHOR: cbzy-3p
 # FORMAT: Surge Rule Set
-# UPDATED: 2026-09-04 19:00:08 UTC
-# RULE COUNT: 172
+# UPDATED: 2026-10-08 21:21:56 UTC
+# RULE COUNT: 177
 # SOURCE: https://ruleset.skk.moe/List/non_ip/ai.conf
 # SOURCE: https://ruleset.skk.moe/List/ip/ai.conf
 # SOURCE: https://raw.githubusercontent.com/Rabbit-Spec/Surge/Master/Rules/AIGC.list
@@ -17,7 +17,6 @@ DOMAIN,anthropic.com.cdn.cloudflare.net
 DOMAIN,antigravity-auto-updater-974169037036.us-central1.run.app
 DOMAIN,api.github.com
 DOMAIN,api.google.com
-DOMAIN,api.jetbrains.ai
 DOMAIN,apple-relay.apple.com
 DOMAIN,apple-relay.cloudflare.com
 DOMAIN,apple-relay.fastly-edge.com
@@ -65,6 +64,7 @@ DOMAIN-SUFFIX,clau.de
 DOMAIN-SUFFIX,claude-code.mintlify.app
 DOMAIN-SUFFIX,claude.ai
 DOMAIN-SUFFIX,claude.com
+DOMAIN-SUFFIX,claude.dev
 DOMAIN-SUFFIX,claudemcpclient.com
 DOMAIN-SUFFIX,claudemcpcontent.com
 DOMAIN-SUFFIX,claudeusercontent.com
@@ -74,6 +74,8 @@ DOMAIN-SUFFIX,clipdrop.co
 DOMAIN-SUFFIX,cloudcode-pa.googleapis.com
 DOMAIN-SUFFIX,coderabbit.ai
 DOMAIN-SUFFIX,coderabbit.gallery.vsassets.io
+DOMAIN-SUFFIX,cohere.ai
+DOMAIN-SUFFIX,cohere.com
 DOMAIN-SUFFIX,copilot-proxy.githubusercontent.com
 DOMAIN-SUFFIX,copilot.microsoft.com
 DOMAIN-SUFFIX,ct.sendgrid.net
@@ -99,6 +101,8 @@ DOMAIN-SUFFIX,githubcopilot.com
 DOMAIN-SUFFIX,grazie.ai
 DOMAIN-SUFFIX,grazie.aws.intellij.net
 DOMAIN-SUFFIX,grok.com
+DOMAIN-SUFFIX,grok.x.com
+DOMAIN-SUFFIX,grokipedia.com
 DOMAIN-SUFFIX,groq.com
 DOMAIN-SUFFIX,identrust.com
 DOMAIN-SUFFIX,images.workoscdn.com
@@ -106,6 +110,7 @@ DOMAIN-SUFFIX,imagine.meta.com
 DOMAIN-SUFFIX,intercom.io
 DOMAIN-SUFFIX,intercomcdn.com
 DOMAIN-SUFFIX,jasper.ai
+DOMAIN-SUFFIX,jetbrains.ai
 DOMAIN-SUFFIX,kimi.ai
 DOMAIN-SUFFIX,kimi.com
 DOMAIN-SUFFIX,launchdarkly.com
