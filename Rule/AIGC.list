@@ -1,8 +1,8 @@
 # NAME: Multi-source-AIGC
 # AUTHOR: cbzy-3p
 # FORMAT: Surge Rule Set
-# UPDATED: 2026-10-08 21:21:56 UTC
-# RULE COUNT: 177
+# UPDATED: 2026-10-10 20:05:47 UTC
+# RULE COUNT: 181
 # SOURCE: https://ruleset.skk.moe/List/non_ip/ai.conf
 # SOURCE: https://ruleset.skk.moe/List/ip/ai.conf
 # SOURCE: https://raw.githubusercontent.com/Rabbit-Spec/Surge/Master/Rules/AIGC.list
@@ -12,7 +12,6 @@
 
 DOMAIN,ai.google.dev
 DOMAIN,aisandbox-pa.googleapis.com
-DOMAIN,anthropic-com.ghost.io
 DOMAIN,anthropic.com.cdn.cloudflare.net
 DOMAIN,antigravity-auto-updater-974169037036.us-central1.run.app
 DOMAIN,api.github.com
@@ -21,8 +20,6 @@ DOMAIN,apple-relay.apple.com
 DOMAIN,apple-relay.cloudflare.com
 DOMAIN,apple-relay.fastly-edge.com
 DOMAIN,browser-intake-datadoghq.com
-DOMAIN,browser-intake-us5-datadoghq.com
-DOMAIN,cdn.usefathom.com
 DOMAIN,cp4.cloudflare.com
 DOMAIN,daily-cloudcode-pa.googleapis.com
 DOMAIN,daily-cloudcode-pa.sandbox.googleapis.com
@@ -46,6 +43,7 @@ DOMAIN-SUFFIX,aicode.googleapis.com
 DOMAIN-SUFFIX,aida.googleapis.com
 DOMAIN-SUFFIX,aistudio.google.com
 DOMAIN-SUFFIX,algolia.net
+DOMAIN-SUFFIX,anthropic-com.ghost.io
 DOMAIN-SUFFIX,anthropic.com
 DOMAIN-SUFFIX,antigravity-unleash.goog
 DOMAIN-SUFFIX,antigravity.google
@@ -53,7 +51,9 @@ DOMAIN-SUFFIX,api.revenuecat.com
 DOMAIN-SUFFIX,apps.mzstatic.com
 DOMAIN-SUFFIX,auth0.com
 DOMAIN-SUFFIX,bard.google.com
+DOMAIN-SUFFIX,browser-intake-us5-datadoghq.com
 DOMAIN-SUFFIX,byteoversea.com
+DOMAIN-SUFFIX,cdn.usefathom.com
 DOMAIN-SUFFIX,challenges.cloudflare.com
 DOMAIN-SUFFIX,chat.com
 DOMAIN-SUFFIX,chatgpt.com
@@ -150,11 +150,15 @@ DOMAIN-SUFFIX,workos.imgix.net
 DOMAIN-SUFFIX,x.ai
 DOMAIN-SUFFIX,zed.dev
 DOMAIN-KEYWORD,alkalimakersuite-pa.clients6.google.com
+DOMAIN-KEYWORD,anthropic
+DOMAIN-KEYWORD,claude
+DOMAIN-KEYWORD,datadoghq
 DOMAIN-KEYWORD,labs.google
 DOMAIN-KEYWORD,notebooklm.google
 DOMAIN-KEYWORD,openai
 DOMAIN-KEYWORD,openaiapi
 DOMAIN-KEYWORD,openaicom
+DOMAIN-KEYWORD,sift
 URL-REGEX,https://www\.google\.com/.*continue=https://gemini\.google\.com.+
 IP-CIDR,102.37.57.54/32,no-resolve
 IP-CIDR,129.146.3.78/32,no-resolve
